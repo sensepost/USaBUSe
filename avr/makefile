@@ -9,5 +9,6 @@ all:
 	@echo Executing \"make $@\" on all LUFA library elements.
 	@echo
 	$(MAKE) -C KeyboardMouseGeneric $@
+	$(MAKE) -C Program_ESP $@
 	@echo
 	@echo \"make $@\" operation complete.
