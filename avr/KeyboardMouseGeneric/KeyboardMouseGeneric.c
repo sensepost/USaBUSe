@@ -236,12 +236,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 			return false;
 
 		if (tlv_data->channel == TLV_HID && (tlv_data->length == 2 || tlv_data->length == 7)) {
-
-// #define DEBUG
-#ifdef DEBUG
-			debug_tlv("K: ", tlv_data->channel, tlv_data->length, tlv_data->data);
-#endif
-
 			USB_KeyboardReport_Data_t* KeyboardReport = (USB_KeyboardReport_Data_t*)ReportData;
 			KeyboardReport->Modifier = tlv_data->data[0];
 
@@ -253,11 +247,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 			tlv_data = NULL;
 			return true;
 		} else if (tlv_data->channel == TLV_HID && tlv_data->length == 4)	{
-	// #define DEBUG
-	#ifdef DEBUG
-			debug_tlv("Mouse: ", tlv_data->channel, tlv_data->length, tlv_data->data);
-	#endif
-
 			USB_MouseReport_Data_t* MouseReport = (USB_MouseReport_Data_t*)ReportData;
 
 			MouseReport->Button = tlv_data->data[0];
@@ -276,10 +265,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 		{
 			uint16_t available = MIN(GENERIC_REPORT_SIZE - 1, RingBuffer_GetCount(&HID_Buffer));
 			if (available > 0) {
-				char buff[32];
-				sprintf(buff, "%d bytes", available);
-				debug(buff);
-
 				data[0] = (uint8_t) (available & 0xFF);
 				for (uint8_t i=0; i< available; i++) {
 					data[i+1] = RingBuffer_Remove(&HID_Buffer);
@@ -315,8 +300,11 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 	case INTERFACE_ID_GenericHID:
 		{
 			uint8_t *data = (uint8_t *) ReportData;
-			tlv_send_queue(TLV_GENERIC, data[0], &data[1]);
+			if (data[0] > 0) {
+				if (data[0] < 8) { // todo use a define to specify the max size
+					tlv_send_queue(TLV_GENERIC, data[0], &data[1]);
+				}
+			}
 		}
 	}
 }
-
