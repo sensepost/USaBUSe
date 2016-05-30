@@ -143,14 +143,7 @@ int main(void)
 
 		if (tlv_data != NULL) {
 			if (tlv_data->channel == 0 && tlv_data->length == 2) { // control message
-				if (tlv_data->data[0] == 1) { // channel active
-					if (tlv_data->data[1] == TLV_GENERIC) {
-						hid_active = true;
-					}
-				} else if (tlv_data->data[0] == 2) { // inactive
-					if (tlv_data->data[1] == TLV_GENERIC)
-						hid_active = false;
-				}
+				// there are no important control messages that we act on currently
 				tlv_data = NULL;
 			} else if (tlv_data->channel == TLV_GENERIC) {
 				uint16_t hid_free = RingBuffer_GetFreeCount(&HID_Buffer);
@@ -303,10 +296,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 				for (uint8_t i=0; i< available; i++) {
 					data[i+1] = RingBuffer_Remove(&HID_Buffer);
 				}
-				*ReportSize = 8;
-				return true;
-			} else if (hid_active) {
-				memset(data,0,8);
 				*ReportSize = 8;
 				return true;
 			}
