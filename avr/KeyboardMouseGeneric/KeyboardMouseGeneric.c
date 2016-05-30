@@ -45,7 +45,7 @@ static uint8_t	Debug_Buffer_Data[256];
 /** Circular buffer to hold data from the serial port before it is relayed to the USB Serial interface
  * plus underlying data buffer */
 static RingBuffer_t HID_Buffer;
-static uint8_t	HID_Buffer_Data[256];
+static uint8_t	HID_Buffer_Data[TLV_MAX_PACKET];
 
 /** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevHIDReportBuffer[MAX(sizeof(USB_KeyboardReport_Data_t), sizeof(USB_MouseReport_Data_t))];
