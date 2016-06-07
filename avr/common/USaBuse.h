@@ -4,6 +4,7 @@
 
 #define TLV_MAX_PACKET 64
 
+#define TLV_CONTROL 0
 #define TLV_HID 1
 #define TLV_GENERIC 2
 

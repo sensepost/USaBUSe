@@ -45,7 +45,7 @@ static uint8_t	Debug_Buffer_Data[256];
 /** Circular buffer to hold data from the serial port before it is relayed to the USB Serial interface
  * plus underlying data buffer */
 static RingBuffer_t HID_Buffer;
-static uint8_t	HID_Buffer_Data[TLV_MAX_PACKET];
+static uint8_t	HID_Buffer_Data[GENERIC_REPORT_SIZE];
 
 /** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevHIDReportBuffer[MAX(sizeof(USB_KeyboardReport_Data_t), sizeof(USB_MouseReport_Data_t))];
@@ -111,7 +111,7 @@ int main(void)
 
 	GlobalInterruptEnable();
 
-	initESP(38400);
+	initESP(250000);
 	RingBuffer_InitBuffer(&Debug_Buffer, Debug_Buffer_Data, sizeof(Debug_Buffer_Data));
 	RingBuffer_InitBuffer(&HID_Buffer, HID_Buffer_Data, sizeof(HID_Buffer_Data));
 #ifdef DEBUG_DESCRIPTORS
@@ -269,7 +269,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 				for (uint8_t i=0; i< available; i++) {
 					data[i+1] = RingBuffer_Remove(&HID_Buffer);
 				}
-				*ReportSize = 8;
+				*ReportSize = GENERIC_REPORT_SIZE;
 				return true;
 			}
 		}
@@ -301,7 +301,7 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 		{
 			uint8_t *data = (uint8_t *) ReportData;
 			if (data[0] > 0) {
-				if (data[0] < 8) { // todo use a define to specify the max size
+				if (data[0] < GENERIC_REPORT_SIZE) { // todo use a define to specify the max size
 					tlv_send_queue(TLV_GENERIC, data[0], &data[1]);
 				}
 			}
