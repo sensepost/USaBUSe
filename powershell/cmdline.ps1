@@ -65,9 +65,8 @@ public class cmdline
 [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 internal static extern SafeFileHandle CreateFile(String lpFileName, UInt32 dwDesiredAccess, Int32 dwShareMode, IntPtr lpSecurityAttributes, Int32 dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
 
-public static void Main()
+public static void go(string fn)
 {
-string fn = @"\\?\hid#vid_03eb&pid_2066&mi_01#9&13294738&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}";
 ProcessStartInfo psi = new ProcessStartInfo();
 psi.CreateNoWindow = false;
 psi.UseShellExecute = false;
@@ -104,6 +103,9 @@ new Thread(new pipe(d, i, true).connect).Start();
 }
 "@
 Add-Type -TypeDefinition $source
-[GenericHid.cmdline]::Main()
+gwmi Win32_USBControllerDevice |%{[wmi]($_.Dependent)} | where-object {$_.GetPropertyValue("DeviceID").StartsWith("HID\VID_03EB&PID_2066") -and ($_.GetPropertyValue("Service") -eq $null)} | ForEach-Object {
+	 $fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{4d1e55b2-f16f-11cf-88cb-001111000030}")
+}
+[GenericHid.cmdline]::go($fn)
 
 
