@@ -10,6 +10,7 @@ namespace GenericHid
 {
 class pipe
 {
+private int M = 64;
 private Stream r, w;
 bool x;
 public static volatile bool y = true;
@@ -23,17 +24,17 @@ x = xx;
 public void connect()
 {
 int read;
-Byte[] b = new Byte[9];
+Byte[] b = new Byte[M+1];
 try
 {
 while (y)
 {
-read = x ? r.Read(b, 0, 9) : r.Read(b, 2, 7);
+read = x ? r.Read(b, 0, M+1) : r.Read(b, 2, M-1);
 if (read > 0)
 {
 if (x)
 {
-if (b[1] > 0 && b[1] < 8)
+if (b[1] > 0 && b[1] < M)
 {
 w.Write(b, 2, b[1]);
 w.Flush();
@@ -45,14 +46,14 @@ else
 b[1] = (byte)read;
 lock(w)
 {
-w.Write(b, 0, 9);
+w.Write(b, 0, M+1);
 }
 }
 }
 }
 } catch (Exception e)
 {
-Console.WriteLine("Exception");
+Console.WriteLine(e.Message);
 Console.WriteLine(e.StackTrace.ToString());
 y = false;
 return;
@@ -105,6 +106,7 @@ new Thread(new pipe(d, i, true).connect).Start();
 Add-Type -TypeDefinition $source
 gwmi Win32_USBControllerDevice |%{[wmi]($_.Dependent)} | where-object {$_.GetPropertyValue("DeviceID").StartsWith("HID\VID_03EB&PID_2066") -and ($_.GetPropertyValue("Service") -eq $null)} | ForEach-Object {
 	 $fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{4d1e55b2-f16f-11cf-88cb-001111000030}")
+	 Write-Host $fn
 }
 [GenericHid.cmdline]::go($fn)
 
