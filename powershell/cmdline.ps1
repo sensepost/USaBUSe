@@ -1,3 +1,6 @@
+$Host.UI.RawUI.BackgroundColor = 'White'
+$Host.UI.RawUI.ForegroundColor = 'Black'
+Clear
 $source=@"
 using Microsoft.Win32.SafeHandles;
 using System;
