@@ -78,4 +78,3 @@
 		                                          const uint16_t ReportSize);
 
 #endif
-
