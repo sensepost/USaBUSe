@@ -2,36 +2,9 @@
 
 #include "USaBuse.h"
 
-// #define DEBUG
-
 void UART_Init(uint32_t baud);
 void tlv_send_fc(bool enabled);
 void tlv_send_uart(void);
-
-static RingBuffer_t *Debug_Buffer;
-
-void tlv_initDebugBuffer(RingBuffer_t *buffer) {
-	Debug_Buffer = buffer;
-}
-
-static inline void
-RingBuffer_InsertString(RingBuffer_t * Buffer,
-			char *Data)ATTR_NON_NULL_PTR_ARG(1);
-
-static inline void RingBuffer_InsertString(RingBuffer_t * Buffer, char *Data)
-{
-	char           *c = Data;
-	if (RingBuffer_GetFreeCount(Buffer) > strlen(Data)) {
-		while (*c) {
-			RingBuffer_Insert(Buffer, *c++);
-		}
-	}
-}
-
-static inline void cm_debug(char *Data) {
-	if (Debug_Buffer != NULL)
-		RingBuffer_InsertString(Debug_Buffer, Data);
-}
 
 /** Circular buffer to hold data from the serial port, plus underlying data buffer */
 static RingBuffer_t USARTtoUC_Buffer;
@@ -40,6 +13,19 @@ static uint8_t USARTtoUC_Buffer_Data[TLV_MAX_PACKET * 4];
 /** Circular buffer to hold data being sent to the serial port, plus underlying buffer. */
 static RingBuffer_t UCtoUSART_Buffer;
 static uint8_t UCtoUSART_Buffer_Data[TLV_MAX_PACKET * 4];
+
+/** Circular buffer to hold HID events, plus underlying buffer. */
+static RingBuffer_t HID_Buffer;
+// 1 byte type, up to 7 bytes data, plus 1 extra for the type of the next report
+// this implies that there will either always be space for the data (since the
+// HID report generating routine will always remove in chunks of 8), or only the
+// type. This means we don't have to check if there is space when inserting
+// padding, as there will always be enough room if we get to that point.
+static uint8_t HID_Buffer_Data[8 * 10 + 1];
+
+/** Circular buffer to hold data sent to the target, plus underlying buffer. */
+static RingBuffer_t PipeTX_Buffer;
+static uint8_t PipeTX_Buffer_Data[256];
 
 // defines the end of ESP boot loader messages, and start of ESP application messages
 // this is just `echo -n "" | md5`
@@ -55,11 +41,17 @@ static bool tlv_send_flow_paused = false, tlv_recv_flow_paused = false;
 void initESP(uint32_t baud) {
 	memset(&UCtoUSART_Buffer_Data, 0, sizeof(UCtoUSART_Buffer_Data));
 	memset(&USARTtoUC_Buffer_Data, 0, sizeof(USARTtoUC_Buffer_Data));
+	memset(&HID_Buffer_Data, 0, sizeof(HID_Buffer_Data));
+	memset(&PipeTX_Buffer_Data, 0, sizeof(PipeTX_Buffer_Data));
 
 	RingBuffer_InitBuffer(&UCtoUSART_Buffer, UCtoUSART_Buffer_Data,
-			sizeof(UCtoUSART_Buffer_Data));
+		sizeof(UCtoUSART_Buffer_Data));
 	RingBuffer_InitBuffer(&USARTtoUC_Buffer, USARTtoUC_Buffer_Data,
-			sizeof(USARTtoUC_Buffer_Data));
+		sizeof(USARTtoUC_Buffer_Data));
+	RingBuffer_InitBuffer(&HID_Buffer, HID_Buffer_Data,
+		sizeof(HID_Buffer_Data));
+	RingBuffer_InitBuffer(&PipeTX_Buffer, PipeTX_Buffer_Data,
+		sizeof(PipeTX_Buffer_Data));
 
 	// Set the UART to the rate required for the boot loader
 	UART_Init(baud);
@@ -75,7 +67,7 @@ void initESP(uint32_t baud) {
 	// set pin 13 to high
 	PORTC |= (1 << PC7);
 
-	// read the bootloader messages
+	// read the bootloader messages, until we see the startup message from our code
 	while (boot_match < strlen(boot_message)) {
 		while (RingBuffer_GetCount(&USARTtoUC_Buffer) > 0) {
 			uint8_t b = RingBuffer_Remove(&USARTtoUC_Buffer);
@@ -86,97 +78,84 @@ void initESP(uint32_t baud) {
 			}
 		}
 	}
-
-//	cm_debug("FC on\n");
-//	tlv_send_fc(true);
-//	tlv_recv_flow_paused = true;
-
 }
 
-#define DEBUG
-tlv_data_t* tlv_read() {
-	static tlv_data_t tlv_data;
+void usabuse_task(void) {
+	static uint8_t tlv_channel = 0;
+	static uint8_t tlv_length = 0;
 	static uint8_t tlv_data_read = 0;
-	static bool err = false;
-
-#define FLOW_COUNTER 32768
-	static uint16_t flow_control_counter = FLOW_COUNTER;
-
-#ifdef DEBUG
-	char buf[32];
-#endif
 
 	uint16_t available = RingBuffer_GetCount(&USARTtoUC_Buffer);
 
-	if (available == 0 && ++flow_control_counter == 0) {
-		// periodic reminder to disable flow control in case things get stuck
-		tlv_send_fc(false);
-		flow_control_counter = FLOW_COUNTER;
-	}
-
-	if (err) {
-		if (available > 0) {
-			sprintf(buf, "B: %d\n", available);
-			cm_debug(buf);
-		}
-	    while (available-- > 0) {
-	    	RingBuffer_Remove(&USARTtoUC_Buffer);
-	    }
-		return NULL;
-	}
-
-	if (tlv_recv_flow_paused && RingBuffer_GetCount(&USARTtoUC_Buffer) == 0) {
+	if (tlv_recv_flow_paused && available == 0) {
 		tlv_send_fc(false);
 		tlv_recv_flow_paused = false;
 	}
 	tlv_send_uart();
 	while ((available = RingBuffer_GetCount(&USARTtoUC_Buffer)) > 0) {
-		// reset the flow control counter
-		flow_control_counter = FLOW_COUNTER;
-
-		if (available == sizeof(USARTtoUC_Buffer_Data)) {
-			sprintf(buf, "C: %d\n", available);
-		    cm_debug(buf);
-		}
-		if (available > TLV_MAX_PACKET && !tlv_recv_flow_paused) {
-			cm_debug("FC on\n");
-			tlv_send_fc(true);
-			tlv_recv_flow_paused = true;
-		}
-		uint8_t b = RingBuffer_Remove(&USARTtoUC_Buffer);
 		switch (tlv_read_state) {
 		case CHANNEL:
-			tlv_data.channel = b;
+			tlv_channel = RingBuffer_Remove(&USARTtoUC_Buffer);
 			tlv_read_state = LENGTH;
 			break;
 		case LENGTH:
-			tlv_data.length = b;
+			tlv_length = RingBuffer_Remove(&USARTtoUC_Buffer);
 			tlv_data_read = 0;
 			tlv_read_state = DATA;
-
+			if (tlv_channel == TLV_HID) {
+				if (tlv_length == 2 || tlv_length == 7) { // keyboard data
+					RingBuffer_Insert(&HID_Buffer, 1);
+				} else if (tlv_length == 4) { // mouse data
+					RingBuffer_Insert(&HID_Buffer, 2);
+				}
+			}
 			break;
 		case DATA:
-			tlv_data.data[tlv_data_read++] = b;
+		  switch (tlv_channel) {
+				case TLV_HID:
+					if (!RingBuffer_IsFull(&HID_Buffer)) {
+						uint8_t b = RingBuffer_Remove(&USARTtoUC_Buffer);
+						RingBuffer_Insert(&HID_Buffer, b);
+						tlv_data_read++;
+					} else
+						return;
+					break;
+				case TLV_PIPE:
+					if (!RingBuffer_IsFull(&PipeTX_Buffer)) {
+						uint8_t b = RingBuffer_Remove(&USARTtoUC_Buffer);
+						RingBuffer_Insert(&PipeTX_Buffer, b);
+						tlv_data_read++;
+					} else
+						return;
+					break;
+				default:
+					// discard the message
+					RingBuffer_Remove(&USARTtoUC_Buffer);
+					tlv_data_read++;
+					break;
+		  }
 
-			if (tlv_data_read == tlv_data.length) {
+			if (tlv_data_read == tlv_length) {
 				tlv_read_state = CHANNEL;
+				if (tlv_channel == TLV_HID && tlv_length < 7) {
+					// pad it to 1 + 7 characters
+					for (uint8_t i = tlv_length; i < 7; i++) {
+						RingBuffer_Insert(&HID_Buffer, 0);
+					}
+				}
 
 				if (!tlv_recv_flow_paused) {
 //					tlv_send_fc(true); // implicit on the ESP
 					tlv_recv_flow_paused = true;
 				}
-
-				return &tlv_data;
 			}
 			break;
 		}
 	}
-	return NULL;
 }
 
 bool tlv_send_queue(uint8_t channel, uint8_t length, uint8_t *data) {
 	if (tlv_send_flow_paused || RingBuffer_GetFreeCount(&UCtoUSART_Buffer) < length + 2) {
-		cm_debug("Paused or no space in tlv_send_queue\r\n");
 		return false;
 	}
 	RingBuffer_Insert(&UCtoUSART_Buffer, channel);
@@ -188,9 +167,6 @@ bool tlv_send_queue(uint8_t channel, uint8_t length, uint8_t *data) {
 }
 
 void tlv_send_fc(bool enabled) {
-	if (tlv_send_state != CHANNEL) {
-		cm_debug("XOn?");
-	}
 	while (tlv_send_state != CHANNEL) {
 		// flush any in progress message
 		while (!Serial_IsSendReady());
@@ -205,6 +181,28 @@ void tlv_send_fc(bool enabled) {
 	Serial_SendByte(0); // Flow control
 	while (!Serial_IsSendReady());
 	Serial_SendByte(enabled ? 1 : 0); // enabled
+}
+
+// This could be made more intelligent to make sure that there is always a key-up
+// event pending.
+uint8_t usabuse_get_hid(uint8_t *data) {
+	if (RingBuffer_GetCount(&HID_Buffer) < 8)
+	 	return 0;
+	uint8_t report_type = RingBuffer_Remove(&HID_Buffer);
+	for (uint8_t i=0; i<7; i++)
+		data[i] = RingBuffer_Remove(&HID_Buffer);
+	return report_type;
+}
+
+uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max) {
+	uint8_t count = MIN(max, RingBuffer_GetCount(&PipeTX_Buffer));
+	for (uint8_t i = 0; i < count; i++)
+		data[i] = RingBuffer_Remove(&PipeTX_Buffer);
+	return count;
+}
+
+bool usabuse_put_pipe(uint8_t *data, uint8_t count) {
+	return tlv_send_queue(TLV_PIPE, count, data);
 }
 
 void tlv_send_uart() {
@@ -245,9 +243,22 @@ ISR(USART1_RX_vect, ISR_BLOCK) {
 
 	if (!(RingBuffer_IsFull(&USARTtoUC_Buffer)))
 		RingBuffer_Insert(&USARTtoUC_Buffer, ReceivedByte);
-	else
-		cm_debug("Z");
 }
+
+/* TODO: Explore this for better performance
+
+When adding data to the TX Ringbuffer, enable the UDRE interrupt:
+	UCSR1B |= _BV(UDRIE1);
+
+ISR(USART1_UDRE_vect, ISR_BLOCK) {
+	if (RingBuffer_GetCount(&UCtoUSART_Buffer) > 0) {
+		UDR1 = RingBuffer_Remove(&UCtoUSART_Buffer);
+	} else {
+	  // disable interrupt
+		UCSR1B &= ~(1 << UDRIE1);
+	}
+}
+*/
 
 void UART_Init(uint32_t baud) {
 	uint8_t ConfigMask = 0;
@@ -284,4 +295,3 @@ void UART_Init(uint32_t baud) {
 	/* Release the TX line after the USART has been reconfigured */
 	PORTD &= ~(1 << 3);
 }
-

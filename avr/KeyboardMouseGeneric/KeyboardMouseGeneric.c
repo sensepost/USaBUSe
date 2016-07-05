@@ -37,16 +37,6 @@
 #include "KeyboardMouseGeneric.h"
 #include "../common/USaBuse.h"
 
-/** Circular buffer to hold data from the serial port before it is relayed to the USB Serial interface
- * plus underlying data buffer */
-static RingBuffer_t Debug_Buffer;
-static uint8_t	Debug_Buffer_Data[256];
-
-/** Circular buffer to hold data from the serial port before it is relayed to the USB Serial interface
- * plus underlying data buffer */
-static RingBuffer_t HID_Buffer;
-static uint8_t	HID_Buffer_Data[GENERIC_REPORT_SIZE];
-
 /** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevHIDReportBuffer[MAX(sizeof(USB_KeyboardReport_Data_t), sizeof(USB_MouseReport_Data_t))];
 
@@ -89,71 +79,20 @@ USB_ClassInfo_HID_Device_t Generic_HID_Interface =
 			},
 	};
 
-static void debug(char *buf) {
-	uint8_t len = strlen(buf);
-	while (len > 0) {
-		uint8_t l = MIN(len, TLV_MAX_PACKET);
-		tlv_send_queue(3, l, (uint8_t *) buf);
-		buf += l;
-		len -= l;
-	}
-}
-
-static tlv_data_t* tlv_data = NULL;
-static bool hid_active = false;
-
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
 int main(void)
 {
 	SetupHardware();
+	USB_Init();
 
 	GlobalInterruptEnable();
 
 	initESP(250000);
-	RingBuffer_InitBuffer(&Debug_Buffer, Debug_Buffer_Data, sizeof(Debug_Buffer_Data));
-	RingBuffer_InitBuffer(&HID_Buffer, HID_Buffer_Data, sizeof(HID_Buffer_Data));
-#ifdef DEBUG_DESCRIPTORS
-	dsc_initDebugBuffer(&Debug_Buffer);
-#endif
-	tlv_initDebugBuffer(&Debug_Buffer);
-
 	for (;;)
 	{
-		uint16_t debug_bytes = MIN(TLV_MAX_PACKET,RingBuffer_GetCount(&Debug_Buffer));
-		if (debug_bytes > 0) {
-			uint8_t buff[debug_bytes];
-			for (uint16_t i=0; i<debug_bytes; i++) {
-				buff[i] = RingBuffer_Remove(&Debug_Buffer);
-			}
-			tlv_send_queue(1, debug_bytes, buff);
-		}
-		if (tlv_data == NULL) {
-			tlv_data = tlv_read();
-#if 0
-			if (tlv_data != NULL) {
-				debug_tlv("P: ", tlv_data->channel, tlv_data->length, tlv_data->data);
-			}
-#endif
-
-		} else {
-			tlv_send_uart();
-		}
-
-		if (tlv_data != NULL) {
-			if (tlv_data->channel == 0 && tlv_data->length == 2) { // control message
-				// there are no important control messages that we act on currently
-				tlv_data = NULL;
-			} else if (tlv_data->channel == TLV_GENERIC) {
-				uint16_t hid_free = RingBuffer_GetFreeCount(&HID_Buffer);
-				if ( hid_free >= tlv_data->length) {
-					for (uint16_t i = 0; i< tlv_data->length; i++)
-						RingBuffer_Insert(&HID_Buffer, tlv_data->data[i]);
-					tlv_data = NULL;
-				}
-			}
-		}
+		usabuse_task();
 
 		HID_Device_USBTask(&Device_HID_Interface);
 		HID_Device_USBTask(&Generic_HID_Interface);
@@ -170,9 +109,6 @@ void SetupHardware()
 
 	/* Disable clock division */
 	clock_prescale_set(clock_div_1);
-
-	/* Hardware Initialization */
-	USB_Init();
 }
 
 /** Event handler for the library USB Connection event. */
@@ -210,6 +146,8 @@ void EVENT_USB_Device_StartOfFrame(void)
 	HID_Device_MillisecondElapsed(&Generic_HID_Interface);
 }
 
+static bool hid_connected = false;
+
 /** HID class driver callback function for the creation of HID reports to the host.
  *
  *  \param[in]     HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
@@ -227,48 +165,52 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
                                          uint16_t* const ReportSize)
 {
 
-	uint8_t* data = (uint8_t *) ReportData;
-
 	switch (HIDInterfaceInfo->Config.InterfaceNumber)
 	{
 	case INTERFACE_ID_KeyboardAndMouse:
-		if (tlv_data == NULL)
+	  {
+			uint8_t data[7];
+			uint8_t type = usabuse_get_hid(data);
+			switch (type) {
+				case 1:
+				{ // keyboard
+					USB_KeyboardReport_Data_t* KeyboardReport = (USB_KeyboardReport_Data_t*)ReportData;
+
+					KeyboardReport->Modifier = data[0];
+					for (uint8_t i = 1; i<7; i++)
+						KeyboardReport->KeyCode[i-1] = data[i];
+
+					*ReportID   = HID_REPORTID_KeyboardReport;
+					*ReportSize = sizeof(USB_KeyboardReport_Data_t);
+					return true;
+				}
+				case 2:
+				{ // mouse
+					USB_MouseReport_Data_t* MouseReport = (USB_MouseReport_Data_t*)ReportData;
+
+					MouseReport->Button = data[0];
+					MouseReport->X = (int8_t) data[1];
+					MouseReport->Y = (int8_t) data[2];
+					// TODO: put the wheel report in here too
+
+					*ReportID   = HID_REPORTID_MouseReport;
+					*ReportSize = sizeof(USB_MouseReport_Data_t);
+					return true;
+				}
+			}
 			return false;
-
-		if (tlv_data->channel == TLV_HID && (tlv_data->length == 2 || tlv_data->length == 7)) {
-			USB_KeyboardReport_Data_t* KeyboardReport = (USB_KeyboardReport_Data_t*)ReportData;
-			KeyboardReport->Modifier = tlv_data->data[0];
-
-			for (uint8_t i = 1; i<tlv_data->length; i++)
-				KeyboardReport->KeyCode[i-1] = tlv_data->data[i];
-
-			*ReportID   = HID_REPORTID_KeyboardReport;
-			*ReportSize = sizeof(USB_KeyboardReport_Data_t);
-			tlv_data = NULL;
-			return true;
-		} else if (tlv_data->channel == TLV_HID && tlv_data->length == 4)	{
-			USB_MouseReport_Data_t* MouseReport = (USB_MouseReport_Data_t*)ReportData;
-
-			MouseReport->Button = tlv_data->data[0];
-			MouseReport->X = (int8_t) tlv_data->data[1];
-			MouseReport->Y = (int8_t) tlv_data->data[2];
-			// TODO: put the wheel report in here too
-
-			*ReportID   = HID_REPORTID_MouseReport;
-			*ReportSize = sizeof(USB_MouseReport_Data_t);
-			tlv_data = NULL;
-			return true;
 		}
-		return false;
 		break;
 	case INTERFACE_ID_GenericHID:
 		{
-			uint16_t available = MIN(GENERIC_REPORT_SIZE - 1, RingBuffer_GetCount(&HID_Buffer));
-			if (available > 0) {
-				data[0] = (uint8_t) (available & 0xFF);
-				for (uint8_t i=0; i< available; i++) {
-					data[i+1] = RingBuffer_Remove(&HID_Buffer);
-				}
+			if (!hid_connected)
+				return false;
+
+			uint8_t* data = (uint8_t *) ReportData;
+
+			uint8_t count = usabuse_get_pipe(&data[1], GENERIC_REPORT_SIZE - 1);
+			if (count > 0) {
+				data[0] = count;
 				*ReportSize = GENERIC_REPORT_SIZE;
 				return true;
 			}
@@ -299,11 +241,10 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 		break;
 	case INTERFACE_ID_GenericHID:
 		{
+			hid_connected = true;
 			uint8_t *data = (uint8_t *) ReportData;
-			if (data[0] > 0) {
-				if (data[0] < GENERIC_REPORT_SIZE) { // todo use a define to specify the max size
-					tlv_send_queue(TLV_GENERIC, data[0], &data[1]);
-				}
+			if (data[0] > 0 && data[0] < GENERIC_REPORT_SIZE) {
+				/* bool success = */ usabuse_put_pipe(&data[1], data[0]);
 			}
 		}
 	}
