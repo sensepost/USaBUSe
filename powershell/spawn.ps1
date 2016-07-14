@@ -48,7 +48,7 @@ function connect($f, $r, $w) {
 					$ft = $null
 				}
 			} else {
-				Start-Sleep -m 10
+				Start-Sleep -m 1
 			}
 		} catch {
 			$ErrorMessage = $_.Exception.Message

