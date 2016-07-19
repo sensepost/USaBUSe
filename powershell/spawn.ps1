@@ -8,7 +8,7 @@ function spawn() {
 	$i.RedirectStandardError = $true
     $i.FileName = "cmd.exe"
 	$i.Arguments = "/c cmd.exe /k 2>&1 "
-	$d = $p.Start()
+	$null = $p.Start()
 	return $p
 }
 
