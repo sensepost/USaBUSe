@@ -38,6 +38,11 @@ static enum {
 
 static bool tlv_send_flow_paused = false, tlv_recv_flow_paused = false;
 
+#define JIGGLER_LOOP_COUNT 50
+static bool jiggler = true;
+static uint16_t jiggler_counter = JIGGLER_LOOP_COUNT;
+static int8_t jiggler_state = 10;
+
 void initESP(uint32_t baud) {
 	memset(&UCtoUSART_Buffer_Data, 0, sizeof(UCtoUSART_Buffer_Data));
 	memset(&USARTtoUC_Buffer_Data, 0, sizeof(USARTtoUC_Buffer_Data));
@@ -150,6 +155,20 @@ void usabuse_task(void) {
 				}
 			}
 			break;
+		}
+	}
+	if (jiggler && jiggler_counter-- == 0) {
+		if (RingBuffer_GetFreeCount(&HID_Buffer) > 7) {
+			RingBuffer_Insert(&HID_Buffer, 2); // mouse data
+			RingBuffer_Insert(&HID_Buffer, 0); // mouse buttons
+			RingBuffer_Insert(&HID_Buffer, jiggler_state); // mouse x
+			RingBuffer_Insert(&HID_Buffer, jiggler_state); // mouse y
+			RingBuffer_Insert(&HID_Buffer, 0); // mouse z
+			RingBuffer_Insert(&HID_Buffer, 0); // padding
+			RingBuffer_Insert(&HID_Buffer, 0); // padding
+			RingBuffer_Insert(&HID_Buffer, 0); // padding
+			jiggler_state = - jiggler_state;
+			jiggler_counter = JIGGLER_LOOP_COUNT;
 		}
 	}
 }
