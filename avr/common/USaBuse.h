@@ -9,6 +9,9 @@
 #define TLV_PIPE 2
 #define TLV_DEBUG 3
 
+#define TLV_CONTROL_FLOW 0
+#define TLV_CONTROL_CONNECT 1
+
 /**
  * Enables the ESP8266 portion of the Cactus Micro Rev2, configures the UART to the specified baud rate, and
  * reads until it encounters a magic string of "d41d8cd98f00b204e9800998ecf8427e", signifying the beginning of
@@ -45,6 +48,10 @@ void tlv_send_uart(void);
 uint8_t usabuse_get_hid(uint8_t *data);
 uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max);
 bool usabuse_put_pipe(uint8_t *data, uint8_t count);
+void usabuse_debug(char *message);
+
+bool usabuse_pipe_write_is_blocked();
+void usabuse_pipe_opened(bool open);
 
 #ifdef DEBUG
 void tlv_initDebugBuffer(RingBuffer_t *buffer);

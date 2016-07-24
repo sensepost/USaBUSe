@@ -146,8 +146,6 @@ void EVENT_USB_Device_StartOfFrame(void)
 	HID_Device_MillisecondElapsed(&Generic_HID_Interface);
 }
 
-static bool hid_connected = false;
-
 /** HID class driver callback function for the creation of HID reports to the host.
  *
  *  \param[in]     HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
@@ -203,17 +201,12 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 		break;
 	case INTERFACE_ID_GenericHID:
 		{
-			if (!hid_connected)
-				return false;
-
 			uint8_t* data = (uint8_t *) ReportData;
 
 			uint8_t count = usabuse_get_pipe(&data[1], GENERIC_REPORT_SIZE - 1);
-			if (count > 0) {
-				data[0] = count;
-				*ReportSize = GENERIC_REPORT_SIZE;
-				return true;
-			}
+			data[0] = count | (usabuse_pipe_write_is_blocked() << 7);
+			*ReportSize = GENERIC_REPORT_SIZE;
+			return true;
 		}
 		break;
 	}
@@ -241,10 +234,12 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 		break;
 	case INTERFACE_ID_GenericHID:
 		{
-			hid_connected = true;
 			uint8_t *data = (uint8_t *) ReportData;
 			if (data[0] > 0 && data[0] < GENERIC_REPORT_SIZE) {
-				/* bool success = */ usabuse_put_pipe(&data[1], data[0]);
+				if (!usabuse_put_pipe(&data[1], data[0]))
+					usabuse_debug("Can't send!");
+			} else if (data[0] == 0) {
+				usabuse_pipe_opened(data[1] != 0);
 			}
 		}
 	}

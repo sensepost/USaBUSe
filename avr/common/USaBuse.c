@@ -37,6 +37,7 @@ static enum {
 } tlv_read_state = CHANNEL, tlv_send_state = CHANNEL;
 
 static bool tlv_send_flow_paused = false, tlv_recv_flow_paused = false;
+static bool pipe_connected = false;
 
 #define JIGGLER_LOOP_COUNT 5000
 static bool jiggler = true;
@@ -174,6 +175,7 @@ void usabuse_task(void) {
 }
 
 bool tlv_send_queue(uint8_t channel, uint8_t length, uint8_t *data) {
+	length = MIN(length, TLV_MAX_PACKET);
 	if (tlv_send_flow_paused || RingBuffer_GetFreeCount(&UCtoUSART_Buffer) < length + 2) {
 		return false;
 	}
@@ -193,11 +195,11 @@ void tlv_send_fc(bool enabled) {
 	}
 
 	while (!Serial_IsSendReady());
-	Serial_SendByte(0); // Control channel
+	Serial_SendByte(TLV_CONTROL); // Control channel
 	while (!Serial_IsSendReady());
 	Serial_SendByte(2); // 2 bytes
 	while (!Serial_IsSendReady());
-	Serial_SendByte(0); // Flow control
+	Serial_SendByte(TLV_CONTROL_FLOW); // Flow control
 	while (!Serial_IsSendReady());
 	Serial_SendByte(enabled ? 1 : 0); // enabled
 }
@@ -222,6 +224,24 @@ uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max) {
 
 bool usabuse_put_pipe(uint8_t *data, uint8_t count) {
 	return tlv_send_queue(TLV_PIPE, count, data);
+}
+
+bool usabuse_pipe_write_is_blocked() {
+	return !pipe_connected || (RingBuffer_GetFreeCount(&UCtoUSART_Buffer) < GENERIC_REPORT_SIZE + 1);
+}
+
+void usabuse_pipe_opened(bool open) {
+	if (open == pipe_connected)
+		return;
+
+	uint8_t data[] = {TLV_CONTROL_CONNECT, open ? 1 : 0};
+	tlv_send_queue(TLV_CONTROL, 2, data);
+	pipe_connected = open; // for debugging purposes, before the ESP is configured to respond
+}
+
+void usabuse_debug(char *message) {
+	uint8_t length = strlen(message);
+	tlv_send_queue(TLV_DEBUG, length, (uint8_t *) message);
 }
 
 void tlv_send_uart() {
