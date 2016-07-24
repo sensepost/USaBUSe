@@ -12,6 +12,8 @@
 #define TLV_CONTROL_FLOW 0
 #define TLV_CONTROL_CONNECT 1
 
+#define GENERIC_REPORT_SIZE 64
+
 /**
  * Enables the ESP8266 portion of the Cactus Micro Rev2, configures the UART to the specified baud rate, and
  * reads until it encounters a magic string of "d41d8cd98f00b204e9800998ecf8427e", signifying the beginning of
