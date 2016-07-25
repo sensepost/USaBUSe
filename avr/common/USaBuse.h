@@ -52,7 +52,7 @@ uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max);
 bool usabuse_put_pipe(uint8_t *data, uint8_t count);
 void usabuse_debug(char *message);
 
-bool usabuse_pipe_write_is_blocked();
+bool usabuse_pipe_write_is_blocked(void);
 void usabuse_pipe_opened(bool open);
 
 #ifdef DEBUG
