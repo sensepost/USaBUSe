@@ -154,24 +154,25 @@ void SetupHardware(void)
 	clock_prescale_set(clock_div_1);
 #endif
 
-#define ESP8266_BOOT
-#ifdef ESP8266_BOOT
-    /*
-     * Enable the ESP8266, which is connected to Arduino Digital Pin 13
-     * aka PC7
-     */
-    DDRC |= (1 << PC7);
-    PORTC |= (1 << PC7);
-#endif
-
-    /*
-     * Enable the ESP8266 programming mode, which is connected to Arduino Digital Pin 12
-     * aka PD6
-     */
-#define ESP_PGM
-#ifdef ESP_PGM
-    DDRD |= (1 << PD6);
-    PORTD &= ~(1 << PD6); // active low
+/*
+ * Enable the ESP8266, which is connected to Arduino Digital Pin 13
+ * aka PC7 and Arduino Digital Pin 12, aka PD6
+ */
+	 // Set pin 13 to output
+	 // Set pin 12 to output
+	DDRC |= (1 << PC7);
+	DDRD |= (1 << PD6);
+#define BLACKBOX_V1
+#ifndef BLACKBOX_V1
+	// set pin 13 to high, 12 to Low
+	PORTC |= (1 << PC7);
+	PORTD &= ~(1 << PD6);
+#else
+	// First batch of Blackbox boards had the pins switched
+	// pin 12 MUST be high, pin 13 MUST be high to boot, 13 must be low to program
+	// PORTC |= (1 << PC7);
+	PORTC &= ~(1 << PC7);
+	PORTD |= (1 << PD6);
 #endif
 
 	/* Hardware Initialization */

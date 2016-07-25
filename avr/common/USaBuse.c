@@ -1,5 +1,4 @@
 #include <LUFA/Drivers/Peripheral/Serial.h>
-
 #include "USaBuse.h"
 
 void UART_Init(uint32_t baud);
@@ -66,12 +65,23 @@ void initESP(uint32_t baud) {
 
 	/*
 	 * Enable the ESP8266, which is connected to Arduino Digital Pin 13
-	 * aka PC7
+	 * aka PC7 and Arduino Digital Pin 12, aka PD6
 	 */
-	// Set pin 13 to output
-	DDRC |= (1 << PC7);
+	 // Set pin 13 to output
+	 // Set pin 12 to output
+ 	DDRC |= (1 << PC7);
+	DDRD |= (1 << PD6);
+#define BLACKBOX_V1
+#ifndef BLACKBOX_V1
 	// set pin 13 to high
 	PORTC |= (1 << PC7);
+	PORTD &= ~(1 << PD6);
+#else
+  // First batch of Blackbox boards had the pins switched
+	// pin 12 MUST be high, pin 13 MUST be high to boot
+	PORTC |= (1 << PC7);
+	PORTD |= (1 << PD6);
+#endif
 
 	// read the bootloader messages, until we see the startup message from our code
 	while (boot_match < strlen(boot_message)) {
