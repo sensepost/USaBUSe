@@ -71,17 +71,16 @@ void initESP(uint32_t baud) {
 	 // Set pin 12 to output
  	DDRC |= (1 << PC7);
 	DDRD |= (1 << PD6);
-#define BLACKBOX_V1
-#ifndef BLACKBOX_V1
-	// set pin 13 to high
-	PORTC |= (1 << PC7);
-	PORTD &= ~(1 << PD6);
-#else
-  // First batch of Blackbox boards had the pins switched
-	// pin 12 MUST be high, pin 13 MUST be high to boot
-	PORTC |= (1 << PC7);
-	PORTD |= (1 << PD6);
-#endif
+	// Set pin 11 (PB7) to input
+	DDRB &= ~(1 << PB7);
+	if (PORTB & ~(1<<PB7)) {
+		// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
+		PORTC |= (1 << PC7);
+		PORTD |= (1 << PD6);
+	} else { // not present, Cactus Micro Rev2, or something else
+		PORTC |= (1 << PC7);
+		PORTD &= ~(1 << PD6);
+	}
 
 	// read the bootloader messages, until we see the startup message from our code
 	while (boot_match < strlen(boot_message)) {
