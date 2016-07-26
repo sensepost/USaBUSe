@@ -79,6 +79,8 @@ USB_ClassInfo_HID_Device_t Generic_HID_Interface =
 			},
 	};
 
+static bool generic_hid_connected = false;
+
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
@@ -201,11 +203,16 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 		break;
 	case INTERFACE_ID_GenericHID:
 		{
-			uint8_t* data = (uint8_t *) ReportData;
+			if (!generic_hid_connected)
+				return false;
 
+			uint8_t* data = (uint8_t *) ReportData;
 			uint8_t count = usabuse_get_pipe(&data[1], GENERIC_REPORT_SIZE - 1);
-			data[0] = count | (usabuse_pipe_write_is_blocked() << 7);
+			data[0] = (count & (GENERIC_REPORT_SIZE-1)) |
+				((usabuse_pipe_write_is_blocked() ? 1 : 0) << 7);
+
 			*ReportSize = GENERIC_REPORT_SIZE;
+			generic_hid_connected = false;
 			return true;
 		}
 		break;
@@ -234,12 +241,14 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 		break;
 	case INTERFACE_ID_GenericHID:
 		{
+			// if they are writing, the victim is ready to read a packet too
+			usabuse_victim_ready();
+			generic_hid_connected = true;
+
 			uint8_t *data = (uint8_t *) ReportData;
 			if (data[0] > 0 && data[0] < GENERIC_REPORT_SIZE) {
-				if (!usabuse_put_pipe(&data[1], data[0]))
+				if (!usabuse_put_pipe(data[0], &data[1]))
 					usabuse_debug("Can't send!");
-			} else if (data[0] == 0) {
-				usabuse_pipe_opened(data[1] != 0);
 			}
 		}
 	}

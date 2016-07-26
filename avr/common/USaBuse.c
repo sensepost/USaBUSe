@@ -3,7 +3,6 @@
 
 void UART_Init(uint32_t baud);
 void tlv_send_fc(bool enabled);
-void tlv_send_uart(void);
 
 /** Circular buffer to hold data from the serial port, plus underlying data buffer */
 static RingBuffer_t USARTtoUC_Buffer;
@@ -36,7 +35,12 @@ static enum {
 } tlv_read_state = CHANNEL, tlv_send_state = CHANNEL;
 
 static bool tlv_send_flow_paused = false, tlv_recv_flow_paused = false;
-static bool pipe_connected = false;
+static enum {
+	PIPE_DISCONNECTED = 0,
+	CONNECT_REQUESTED = 1,
+	PIPE_CONNECTED = 2,
+	DISCONNECT_REQUESTED = 3
+} pipe_state = PIPE_DISCONNECTED;
 
 #define JIGGLER_LOOP_COUNT 5000
 static bool jiggler = true;
@@ -106,7 +110,6 @@ void usabuse_task(void) {
 		tlv_send_fc(false);
 		tlv_recv_flow_paused = false;
 	}
-	tlv_send_uart();
 	while ((available = RingBuffer_GetCount(&USARTtoUC_Buffer)) > 0) {
 		switch (tlv_read_state) {
 		case CHANNEL:
@@ -160,7 +163,7 @@ void usabuse_task(void) {
 				}
 
 				if (!tlv_recv_flow_paused) {
-//					tlv_send_fc(true); // implicit on the ESP
+					// tlv_send_fc(true); // implicit on the ESP
 					tlv_recv_flow_paused = true;
 				}
 			}
@@ -193,24 +196,13 @@ bool tlv_send_queue(uint8_t channel, uint8_t length, uint8_t *data) {
 	for (uint8_t i = 0; i < length; i++) {
 		RingBuffer_Insert(&UCtoUSART_Buffer, data[i]);
 	}
+	UCSR1B |= (1 << UDRIE1);
 	return true;
 }
 
 void tlv_send_fc(bool enabled) {
-	while (tlv_send_state != CHANNEL) {
-		// flush any in progress message
-		while (!Serial_IsSendReady());
-		tlv_send_uart();
-	}
-
-	while (!Serial_IsSendReady());
-	Serial_SendByte(TLV_CONTROL); // Control channel
-	while (!Serial_IsSendReady());
-	Serial_SendByte(2); // 2 bytes
-	while (!Serial_IsSendReady());
-	Serial_SendByte(TLV_CONTROL_FLOW); // Flow control
-	while (!Serial_IsSendReady());
-	Serial_SendByte(enabled ? 1 : 0); // enabled
+	uint8_t data[] = {TLV_CONTROL_FLOW, enabled ? 1 : 0};
+	tlv_send_queue(TLV_CONTROL, 2, data);
 }
 
 // This could be made more intelligent to make sure that there is always a key-up
@@ -231,56 +223,27 @@ uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max) {
 	return count;
 }
 
-bool usabuse_put_pipe(uint8_t *data, uint8_t count) {
+bool usabuse_put_pipe(uint8_t count, uint8_t *data) {
 	return tlv_send_queue(TLV_PIPE, count, data);
 }
 
 bool usabuse_pipe_write_is_blocked() {
-	return !pipe_connected || (RingBuffer_GetFreeCount(&UCtoUSART_Buffer) < GENERIC_REPORT_SIZE + 1);
+	return pipe_state != PIPE_CONNECTED || (RingBuffer_GetFreeCount(&UCtoUSART_Buffer) < TLV_MAX_PACKET + 2);
 }
 
-void usabuse_pipe_opened(bool open) {
-	if (open == pipe_connected)
-		return;
-
-	uint8_t data[] = {TLV_CONTROL_CONNECT, open ? 1 : 0};
-	tlv_send_queue(TLV_CONTROL, 2, data);
-	pipe_connected = open; // for debugging purposes, before the ESP is configured to respond
+void usabuse_victim_ready(void) {
+	if (pipe_state == PIPE_DISCONNECTED) {
+		uint8_t data[] = {TLV_CONTROL_CONNECT};
+		tlv_send_queue(TLV_CONTROL, 1, data);
+		pipe_state = CONNECT_REQUESTED;
+	}
+	// for debugging only, until implemented in the ESP
+	pipe_state = PIPE_CONNECTED;
 }
 
 void usabuse_debug(char *message) {
 	uint8_t length = strlen(message);
 	tlv_send_queue(TLV_DEBUG, length, (uint8_t *) message);
-}
-
-void tlv_send_uart() {
-	static uint8_t length;
-	/*
-	 * Load the next byte from the USART transmit buffer into the
-	 * USART if transmit buffer space is available
-	 */
-	if (Serial_IsSendReady()) {
-		uint16_t available = RingBuffer_GetCount(&UCtoUSART_Buffer);
-		if (available > 0) {
-			uint8_t b = RingBuffer_Remove(&UCtoUSART_Buffer);
-			Serial_SendByte(b);
-			switch (tlv_send_state) {
-			case CHANNEL:
-				tlv_send_state = LENGTH;
-				break;
-			case LENGTH:
-				tlv_send_state = DATA;
-				length = b;
-				break;
-			case DATA:
-				length--;
-				if (length == 0) {
-					tlv_send_state = CHANNEL;
-				}
-				break;
-			}
-		}
-	}
 }
 
 /** ISR to manage the reception of data from the serial port, placing received bytes into a circular buffer
@@ -293,11 +256,12 @@ ISR(USART1_RX_vect, ISR_BLOCK) {
 		RingBuffer_Insert(&USARTtoUC_Buffer, ReceivedByte);
 }
 
-/* TODO: Explore this for better performance
-
-When adding data to the TX Ringbuffer, enable the UDRE interrupt:
-	UCSR1B |= _BV(UDRIE1);
-
+/** ISR to manage sending of data via the serial port, taking data from a
+ * circular buffer
+ *
+ * When adding data to the TX Ringbuffer, enable the UDRE interrupt:
+ * UCSR1B |= (1 << UDRIE1);
+*/
 ISR(USART1_UDRE_vect, ISR_BLOCK) {
 	if (RingBuffer_GetCount(&UCtoUSART_Buffer) > 0) {
 		UDR1 = RingBuffer_Remove(&UCtoUSART_Buffer);
@@ -306,7 +270,6 @@ ISR(USART1_UDRE_vect, ISR_BLOCK) {
 		UCSR1B &= ~(1 << UDRIE1);
 	}
 }
-*/
 
 void UART_Init(uint32_t baud) {
 	uint8_t ConfigMask = 0;
