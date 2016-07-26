@@ -17,7 +17,7 @@ namespace foo {
 	}
 }
 "@
-Add-Type -TypeDefinition $cs
+Add-Type -TypeDefinition $cs | Out-Null
 #Find device
 $devs = gwmi Win32_USBControllerDevice
 foreach ($dev in $devs) {
@@ -40,16 +40,7 @@ $encoderParams = New-Object System.Drawing.Imaging.EncoderParameters(1)
 $encoderParams.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter($qualityEncoder, 10)
 $jpegCodecInfo = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | where {$_.MimeType -eq 'image/jpeg'}
 $pic = New-Object System.IO.MemoryStream
-$out = New-Object System.IO.MemoryStream
 $bmp.Save($pic,$jpegCodecInfo,$encoderParams)
-
-#Compress
-#$tmp = New-Object Byte[] ($pic.Length)
-#$pic.Seek(0, [System.IO.SeekOrigin]::Begin)
-#$pic.Read($tmp,0,$pic.Length)
-#$gzipStream = New-Object System.IO.Compression.GzipStream ($out,([System.IO.Compression.CompressionMode]::Compress) )
-#$gzipStream = New-Object System.IO.Compression.GzipStream ($out,([System.IO.Compression.CompressionLevel]::Optimal) )
-#$gzipStream.Write($tmp, 0, $tmp.Length)
 
 #Write it
 $pic.Seek(0, [System.IO.SeekOrigin]::Begin)
@@ -57,18 +48,15 @@ $picbytes = New-Object Byte[] (65)
 $inbytes = New-Object Byte[] (65)
 $nullbytes = New-Object Byte[] (65)
 
-$picbytes[1] = 63
 while ($pic.Position -lt $pic.Length) {
   $null = $filehandle.Write($nullbytes, 0, 65)
 	$null = $filehandle.Read($inbytes, 0, 65)
 	if ($inbytes[1] -band 128) {
 		Write-Output .
 	} else {
-		$null = $pic.Read($picbytes, 2, 63)
+		$picbytes[1] = $pic.Read($picbytes, 2, 63)
 		$null = $filehandle.Write($picbytes, 0, 65)
 	}
-	$pic.Position
-#	sleep -m 32
+	[System.Console]::WriteLine([String]::Format("{0} of {1}", $pic.Position, $pic.Length))
 }
-#$gzipStream.Close()
 $filehandle.Close()
