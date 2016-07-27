@@ -32,7 +32,7 @@ uint8_t boot_match = 0;
 
 static enum {
 	CHANNEL = 0, LENGTH = 1, DATA = 2
-} tlv_read_state = CHANNEL, tlv_send_state = CHANNEL;
+} tlv_read_state = CHANNEL;
 
 static bool tlv_send_flow_paused = false, tlv_recv_flow_paused = false;
 static enum {
