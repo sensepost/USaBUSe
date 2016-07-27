@@ -162,6 +162,10 @@ void usabuse_task(void) {
 					}
 				}
 
+				if (RingBuffer_GetFreeCount(&USARTtoUC_Buffer) > TLV_MAX_PACKET + 2) {
+					tlv_send_fc(false);
+					tlv_recv_flow_paused = false;
+				} else
 				if (!tlv_recv_flow_paused) {
 					// tlv_send_fc(true); // implicit on the ESP
 					tlv_recv_flow_paused = true;
