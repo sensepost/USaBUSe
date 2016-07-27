@@ -231,14 +231,24 @@ bool usabuse_pipe_write_is_blocked() {
 	return pipe_state != PIPE_CONNECTED || (RingBuffer_GetFreeCount(&UCtoUSART_Buffer) < TLV_MAX_PACKET + 2);
 }
 
-void usabuse_victim_ready(void) {
-	if (pipe_state == PIPE_DISCONNECTED) {
-		uint8_t data[] = {TLV_CONTROL_CONNECT};
-		tlv_send_queue(TLV_CONTROL, 1, data);
+void usabuse_victim_ready(bool ready) {
+	uint8_t data[] = {TLV_CONTROL_CONNECT, ready ? 1 : 0};
+	if (ready && pipe_state == PIPE_DISCONNECTED) {
+		tlv_send_queue(TLV_CONTROL, 2, data);
 		pipe_state = CONNECT_REQUESTED;
+		// for debugging only, until implemented in the ESP
+		pipe_state = PIPE_CONNECTED;
+	} else if (!ready && pipe_state == PIPE_CONNECTED) {
+		tlv_send_queue(TLV_CONTROL, 2, data);
+		pipe_state = DISCONNECT_REQUESTED;
+		// drain the buffered characters
+		uint16_t count = RingBuffer_GetCount(&HID_Buffer);
+		while (count-- > 0)
+			RingBuffer_Remove(&HID_Buffer);
+
+		// for debugging only, until implemented in the ESP
+		pipe_state = PIPE_DISCONNECTED;
 	}
-	// for debugging only, until implemented in the ESP
-	pipe_state = PIPE_CONNECTED;
 }
 
 void usabuse_debug(char *message) {

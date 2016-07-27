@@ -51,7 +51,7 @@ bool usabuse_put_pipe(uint8_t count, uint8_t *data);
 void usabuse_debug(char *message);
 
 bool usabuse_pipe_write_is_blocked(void);
-void usabuse_victim_ready(void);
+void usabuse_victim_ready(bool ready);
 
 #ifdef DEBUG
 void tlv_initDebugBuffer(RingBuffer_t *buffer);

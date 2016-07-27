@@ -80,6 +80,7 @@ USB_ClassInfo_HID_Device_t Generic_HID_Interface =
 	};
 
 static bool generic_hid_connected = false;
+static uint32_t idle_time = 0;
 
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
@@ -95,6 +96,11 @@ int main(void)
 	for (;;)
 	{
 		usabuse_task();
+
+		if (idle_time == 5000) {
+			usabuse_victim_ready(false);
+			generic_hid_connected = false;
+		}
 
 		HID_Device_USBTask(&Device_HID_Interface);
 		HID_Device_USBTask(&Generic_HID_Interface);
@@ -144,6 +150,7 @@ void EVENT_USB_Device_ControlRequest(void)
 /** Event handler for the USB device Start Of Frame event. */
 void EVENT_USB_Device_StartOfFrame(void)
 {
+	idle_time++;
 	HID_Device_MillisecondElapsed(&Device_HID_Interface);
 	HID_Device_MillisecondElapsed(&Generic_HID_Interface);
 }
@@ -242,8 +249,9 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 	case INTERFACE_ID_GenericHID:
 		{
 			// if they are writing, the victim is ready to read a packet too
-			usabuse_victim_ready();
+			usabuse_victim_ready(true);
 			generic_hid_connected = true;
+			idle_time = 0;
 
 			uint8_t *data = (uint8_t *) ReportData;
 			if (data[0] > 0 && data[0] < GENERIC_REPORT_SIZE) {
