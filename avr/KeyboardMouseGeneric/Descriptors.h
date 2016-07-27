@@ -102,7 +102,7 @@ void dsc_initDebugBuffer(RingBuffer_t *buffer);
 		#define HID_EPSIZE                8
 
 		/** Size in bytes of the Generic HID reporting endpoint. */
-		#define GENERIC_EPSIZE            8
+		#define GENERIC_EPSIZE            64
 
 	/* Enums: */
 		/** Enum for the HID report IDs used in the device. */
