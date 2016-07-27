@@ -176,9 +176,14 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	{
 	case INTERFACE_ID_KeyboardAndMouse:
 	  {
+			static uint32_t hid_loop = 0;
 			uint8_t data[7];
 			uint8_t type = usabuse_get_hid(data);
 			switch (type) {
+				case 0: { // nothing to send
+					hid_loop++;
+					return false;
+				}
 				case 1:
 				{ // keyboard
 					USB_KeyboardReport_Data_t* KeyboardReport = (USB_KeyboardReport_Data_t*)ReportData;
@@ -189,6 +194,10 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 
 					*ReportID   = HID_REPORTID_KeyboardReport;
 					*ReportSize = sizeof(USB_KeyboardReport_Data_t);
+					char dbg[32];
+					sprintf(dbg, "HID loop: %lu", hid_loop);
+					hid_loop = 0;
+					usabuse_debug(dbg);
 					return true;
 				}
 				case 2:
