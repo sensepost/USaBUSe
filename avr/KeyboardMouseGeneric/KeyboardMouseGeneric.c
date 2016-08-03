@@ -194,10 +194,12 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 
 					*ReportID   = HID_REPORTID_KeyboardReport;
 					*ReportSize = sizeof(USB_KeyboardReport_Data_t);
-					char dbg[32];
-					sprintf(dbg, "HID loop: %lu", hid_loop);
-					hid_loop = 0;
-					usabuse_debug(dbg);
+					if (hid_loop > 0) {
+						char dbg[32];
+						sprintf(dbg, "HID loop: %lu\n", hid_loop);
+						hid_loop = 0;
+						usabuse_debug(dbg);
+					}
 					return true;
 				}
 				case 2:

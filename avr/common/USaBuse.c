@@ -1,6 +1,74 @@
 #include <LUFA/Drivers/Peripheral/Serial.h>
 #include "USaBuse.h"
 
+typedef void (*f_enable_esp)(void);
+f_enable_esp enable_esp = NULL;
+
+typedef void (*f_uart_flowcontrol)(bool flow_stopped);
+f_uart_flowcontrol uart_flowcontrol = NULL;
+
+void cm_enable_esp(void);
+void cm_enable_esp() {
+	/*
+	 * Enable the ESP8266 on the Cactus Micro Rev2.
+	 * CH_PD is connected to Arduino Digital Pin 13 aka PC7
+	 * GPIO_0 is connected to Arduino Digital Pin 12, aka PD6
+	 */
+	DDRC |= (1 << PC7);
+	DDRD |= (1 << PD6);
+	PORTC |= (1 << PC7);
+	PORTD &= ~(1 << PD6);
+}
+
+void bb_enable_esp(void);
+void bb_enable_esp() {
+	/*
+	 * Enable the ESP8266 on the Blackbox device.
+	 * CH_PD is connected to Arduino Digital Pin 12 aka PD6
+	 * GPIO_0 is connected to Arduino Digital Pin 13, aka PC7
+	 * However GPIO_0 must be pulled high to boot!
+	 */
+	DDRC |= (1 << PC7);
+	DDRD |= (1 << PD6);
+	PORTC |= (1 << PC7);
+	PORTD |= (1 << PD6);
+}
+
+void bb_uart_flowcontrol(bool flow_stopped);
+void cm_uart_flowcontrol(bool flow_stopped) {
+	if (flow_stopped)
+		PORTD |= (1 << PD6);
+	else
+		PORTD &= ~(1<<PD6);
+}
+
+void cm_uart_flowcontrol(bool flow_stopped);
+void bb_uart_flowcontrol(bool flow_stopped) {
+	if (flow_stopped)
+		PORTC |= (1 << PC7);
+	else
+		PORTC &= ~(1<<PC7);
+}
+
+void detect_board(void);
+
+void detect_board() {
+	uint8_t old_DDRB = DDRB;
+
+	// Set pin 11 (PB7) to input
+	DDRB &= ~(1 << PB7);
+	bool led_present = (PORTB & ~(1<<PB7));
+	DDRB = old_DDRB;
+	if (led_present) {
+		// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
+		enable_esp = bb_enable_esp;
+		uart_flowcontrol = bb_uart_flowcontrol;
+	} else {
+		enable_esp = cm_enable_esp;
+		uart_flowcontrol = cm_uart_flowcontrol;
+	}
+}
+
 void UART_Init(uint32_t baud);
 void tlv_send_fc(bool enabled);
 
@@ -62,30 +130,14 @@ void initESP(uint32_t baud) {
 	RingBuffer_InitBuffer(&PipeTX_Buffer, PipeTX_Buffer_Data,
 		sizeof(PipeTX_Buffer_Data));
 
+	detect_board();
+
 	// Set the UART to the rate required for the boot loader
 	UART_Init(baud);
 
 	GlobalInterruptEnable();
 
-	/*
-	 * Enable the ESP8266, which is connected to Arduino Digital Pin 13
-	 * aka PC7 and Arduino Digital Pin 12, aka PD6
-	 */
-	 // Set pin 13 to output
-	 // Set pin 12 to output
- 	DDRC |= (1 << PC7);
-	DDRD |= (1 << PD6);
-	// Set pin 11 (PB7) to input
-	DDRB &= ~(1 << PB7);
-	if (PORTB & ~(1<<PB7)) {
-		// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
-		PORTC |= (1 << PC7);
-		PORTD |= (1 << PD6);
-	} else { // not present, Cactus Micro Rev2, or something else
-		PORTC |= (1 << PC7);
-		PORTD &= ~(1 << PD6);
-	}
-
+	enable_esp();
 	// read the bootloader messages, until we see the startup message from our code
 	while (boot_match < strlen(boot_message)) {
 		while (RingBuffer_GetCount(&USARTtoUC_Buffer) > 0) {
@@ -97,6 +149,10 @@ void initESP(uint32_t baud) {
 			}
 		}
 	}
+
+	// Allow the ESP to send UART data. This can come after the messages
+	// because it is purely advisory.
+	// uart_flowcontrol(false);
 }
 
 void usabuse_task(void) {
@@ -108,6 +164,7 @@ void usabuse_task(void) {
 
 	if (tlv_recv_flow_paused && available == 0) {
 		tlv_send_fc(false);
+		uart_flowcontrol(false);
 		tlv_recv_flow_paused = false;
 	}
 	while ((available = RingBuffer_GetCount(&USARTtoUC_Buffer)) > 0) {
@@ -130,6 +187,29 @@ void usabuse_task(void) {
 			break;
 		case DATA:
 		  switch (tlv_channel) {
+				case TLV_CONTROL: {
+						static uint8_t control_message_type = 0;
+						static uint8_t control_message_detail = 0;
+						switch (tlv_data_read) {
+							case 0:
+								control_message_type = RingBuffer_Remove(&USARTtoUC_Buffer);
+								break;
+							case 1:
+								control_message_detail = RingBuffer_Remove(&USARTtoUC_Buffer);
+								if (control_message_type == TLV_CONTROL_CONNECT) {
+									if (control_message_detail == PIPE_DISCONNECTED) {
+										uint16_t c = RingBuffer_GetCount(&PipeTX_Buffer);
+										while (c--)
+											RingBuffer_Remove(&PipeTX_Buffer);
+									}
+								}
+								break;
+							default:
+								RingBuffer_Remove(&USARTtoUC_Buffer);
+						}
+						tlv_data_read++;
+					}
+					break;
 				case TLV_HID:
 					if (!RingBuffer_IsFull(&HID_Buffer)) {
 						uint8_t b = RingBuffer_Remove(&USARTtoUC_Buffer);
@@ -167,6 +247,7 @@ void usabuse_task(void) {
 					tlv_recv_flow_paused = false;
 				} else
 				if (!tlv_recv_flow_paused) {
+					uart_flowcontrol(true);
 					// tlv_send_fc(true); // implicit on the ESP
 					tlv_recv_flow_paused = true;
 				}

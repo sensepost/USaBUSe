@@ -39,11 +39,6 @@ void tlv_send_uart(void);
  * and indicates what sort of event it is in the return code.
  * If there is no HID Event available, it returns 0. 1 indicates a Keyboard
  * event, 2 indicates a mouse event.
- *
- * Note that this routine may return 0 even though there are events pending
- * in the queue. This is to ensure that there are no unexpected key auto-repeat
- * events in case the key-up event is delayed for some reason. This does mean
- * that auto-repeat is not available on this implementation.
  */
 uint8_t usabuse_get_hid(uint8_t *data);
 uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max);
