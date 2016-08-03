@@ -32,7 +32,7 @@ function connect($device, $stdout, $stdin) {
 					$stdout_bytes_read = $stdout.EndRead($stdout_task)
 					if ($stdout_bytes_read -gt 0) {
 						$stdout_total += $stdout_bytes_read
-						# [string]::Format( "Socket {0} - Device {1}", $stdout_total, $device_total)
+						[string]::Format( "Socket {0} - Device {1}", $stdout_total, $device_total)
 						$stdout_buffer[1] = $stdout_bytes_read
 						$device.Write($stdout_buffer, 0, $M+1)
 						$device.Flush()
@@ -43,13 +43,13 @@ function connect($device, $stdout, $stdin) {
 				} else {
 					[System.Console]::Write("x")
 				}
-			} elseif ($device_task.IsCompleted) {
+			} if ($device_task.IsCompleted) {
 				$device_bytes_read = $device.EndRead($device_task)
 				if ($device_bytes_read -gt 0) {
 					$can_write = (($device_buffer[1] -band 128) -ne 128)
 					$device_buffer[1] = $device_buffer[1] -band ($M-1)
 					$device_total += $device_buffer[1]
-					# [string]::Format( "Socket {0} - Device {1}", $stdout_total, $device_total)
+					[string]::Format( "Socket {0} - Device {1}", $stdout_total, $device_total)
 					$stdin.Write($device_buffer, 2, $device_buffer[1])
 					$stdin.Flush()
 					$device_task = $device.BeginRead($device_buffer, 0, ($M+1), $null, $null)
@@ -73,8 +73,6 @@ function connect($device, $stdout, $stdin) {
 	Write-Output "Main loop completed"
 
 	$f.Close()
-	$r.Close()
-	$w.Close()
 }
 
 $p = spawn
