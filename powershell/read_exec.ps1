@@ -27,7 +27,7 @@ namespace n {
 '.Replace('%',[char]34)
 Add-Type -TypeDefinition $cs
 $h = (Get-Process -Id $pid).MainWindowHandle
-[n.w]::SetWindowPos($h, -2, 2000, 2000, 40, 40, 5)
+$null = [n.w]::SetWindowPos($h, -2, 20, 20, 40, 40, 5)
 
 function stage() {
 	$null = [n.w]::ShowWindowAsync($h, 6)
