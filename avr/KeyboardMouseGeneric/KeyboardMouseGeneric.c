@@ -81,6 +81,7 @@ USB_ClassInfo_HID_Device_t Generic_HID_Interface =
 
 static bool generic_hid_connected = false;
 static uint32_t idle_time = 0;
+static bool write_overflow = false;
 
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
@@ -227,6 +228,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 			uint8_t* data = (uint8_t *) ReportData;
 			uint8_t count = usabuse_get_pipe(&data[1], GENERIC_REPORT_SIZE - 1);
 			data[0] = (count & (GENERIC_REPORT_SIZE-1)) |
+				((write_overflow ? 1 : 0) << 6) |
 				((usabuse_pipe_write_is_blocked() ? 1 : 0) << 7);
 
 			*ReportSize = GENERIC_REPORT_SIZE;
@@ -266,8 +268,10 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 
 			uint8_t *data = (uint8_t *) ReportData;
 			if (data[0] > 0 && data[0] < GENERIC_REPORT_SIZE) {
-				if (!usabuse_put_pipe(data[0], &data[1]))
+				if (!usabuse_put_pipe(data[0], &data[1])) {
 					usabuse_debug("Can't send!");
+					write_overflow = true;
+				}
 			}
 		}
 	}

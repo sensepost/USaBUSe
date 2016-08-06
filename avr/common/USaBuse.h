@@ -42,6 +42,9 @@ void tlv_send_uart(void);
  */
 uint8_t usabuse_get_hid(uint8_t *data);
 uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max);
+int16_t usabuse_peek_pipe(void);
+int16_t usabuse_remove_pipe(void);
+
 bool usabuse_put_pipe(uint8_t count, uint8_t *data);
 void usabuse_debug(char *message);
 

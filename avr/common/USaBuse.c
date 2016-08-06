@@ -308,6 +308,18 @@ uint8_t usabuse_get_pipe(uint8_t *data, uint8_t max) {
 	return count;
 }
 
+int16_t usabuse_peek_pipe(void) {
+	if (RingBuffer_IsEmpty(&PipeTX_Buffer))
+		return -1;
+	return RingBuffer_Peek(&PipeTX_Buffer);
+}
+
+int16_t usabuse_remove_pipe(void) {
+	if (RingBuffer_IsEmpty(&PipeTX_Buffer))
+		return -1;
+	return RingBuffer_Remove(&PipeTX_Buffer);
+}
+
 bool usabuse_put_pipe(uint8_t count, uint8_t *data) {
 	return tlv_send_queue(TLV_PIPE, count, data);
 }
