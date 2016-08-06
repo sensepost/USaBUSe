@@ -1,6 +1,6 @@
 $ui = $Host.UI.RawUI
 $ui.BackgroundColor = 'Black'
-$ui.ForegroundColor = 'Black'
+$ui.ForegroundColor = 'White'
 Clear
 
 $ui.WindowTitle = 'Universal Serial aBuse'
