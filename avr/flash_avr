@@ -1,0 +1,34 @@
+#!/bin/bash
+
+BASEDIR=`dirname $0`
+
+HEX="$1"
+
+# press the reset button twice to enter the bootloader, then loop until the bootloader serial interface appears, before trying to program it
+
+# this device pattern works OK on Linux and OS X, but watch out
+# if you have any additional USB Serial devices connected
+
+DEVICEPATTERN="/dev/cu.usbmodem* /dev/ttyACM*"
+
+DEVICE=`ls ${DEVICEPATTERN} 2> /dev/null`
+
+if [ -z "$DEVICE" ] ; then
+	echo -n "No device found, waiting for it to show up"
+	while [ -z "$DEVICE" ] ; do
+		sleep 1
+		echo -n "."
+		DEVICE=`ls ${DEVICEPATTERN} 2> /dev/null`
+	done
+else
+	echo -n "Waiting for the device to go away "
+	while [ -c ${DEVICE} ] ; do sleep 1; echo -n "."; done
+	echo
+	echo -n "Waiting for it to come back "
+	while [ ! -c ${DEVICE} ] ; do sleep 1; echo -n "."; done
+	echo
+	echo "Got it!"
+fi
+
+avrdude -q -q -patmega32u4 -cavr109 -P${DEVICE} -b57600 -D -Uflash:w:${HEX}:i
+
