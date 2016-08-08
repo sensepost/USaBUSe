@@ -154,6 +154,28 @@ void SetupHardware(void)
 	clock_prescale_set(clock_div_1);
 #endif
 
+#if 0
+/*
+ * Enable the ESP8266, which is connected to Arduino Digital Pin 13
+ * aka PC7 and Arduino Digital Pin 12, aka PD6
+ */
+ // Set pin 13 to output
+ // Set pin 12 to output
+DDRC |= (1 << PC7);
+DDRD |= (1 << PD6);
+// Set pin 11 (PB7) to input
+DDRB &= ~(1 << PB7);
+
+if (PORTB & ~(1<<PB7)) {
+	// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
+	PORTC &= !(1 << PC7);
+	PORTD |= (1 << PD6);
+} else { // not present, Cactus Micro Rev2, or something else
+	PORTC |= (1 << PC7);
+	PORTD &= ~(1 << PD6);
+}
+#else
+
 /*
  * Enable the ESP8266, which is connected to Arduino Digital Pin 13
  * aka PC7 and Arduino Digital Pin 12, aka PD6
@@ -173,6 +195,7 @@ void SetupHardware(void)
 	// PORTC |= (1 << PC7);
 	PORTC &= ~(1 << PC7);
 	PORTD |= (1 << PD6);
+#endif
 #endif
 
 	/* Hardware Initialization */
