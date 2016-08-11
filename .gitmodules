@@ -10,3 +10,6 @@
 [submodule "esptool"]
 	path = esptool
 	url = https://github.com/AprilBrother/esptool
+[submodule "vncdotool"]
+	path = vncdotool
+	url = https://github.com/RoganDawes/vncdotool

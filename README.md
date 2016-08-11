@@ -1,22 +1,56 @@
 Instructions for building the Universal Serial aBuse firmwares and host software
 
-First steps are to install the various compilers for the microprocessors.
+Start off by performing a recursive clone of the repository:
 
-OS X and Linux can install the ESP tools by following the instruction in the ESP Open SDK repo:
+$ git clone --recursive https://github.com/sensepost/USaBUSe
 
-https://github.com/pfalcon/esp-open-sdk
+This can take some time, please be patient!
 
-NB: Make sure to compile the non-standalone version of the esp-open-sdk, otherwise there will
-be problems with C types such as uint32_t:
+Building the ESP8266 firmware
+=============================
 
-$ make STANDALONE=n
+Once the recursive clone has completed, build the esp-open-sdk (make sure to
+build the STANDALONE version!):
+
+  $ cd esp-open-sdk
+  $ make STANDALONE=n
+
+Note: This step MUST be done on a case-sensitive file system! For OS X, create
+an extra volume, make sure to select a case-sensitive file system, and do the
+above clone --recursive in this file system.
 
 Once the esp-open-sdk has compiled, in the top-level directory, do:
 
-$ wget --content-disposition "http://bbs.espressif.com/download/file.php?id=1046
-$ unzip ESP8266_NONOS_SDK_V1.5.1_16_01_08.zip
+  $ wget --content-disposition "http://bbs.espressif.com/download/file.php?id=1046"
+  $ unzip ESP8266_NONOS_SDK_V1.5.1_16_01_08.zip
 
-At this stage, you should be able to change to the esp-vnc directory, and run make.
+If you are on OS X, you will probably need to install GNU sed, and make sure it
+is in your PATH. An easy way of doing this is to use HomeBrew:
+
+  $ brew install gnu-sed
+  $ export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+
+Alternatively, to ensure that it remains accessible after you log out, and to
+avoid strange errors on future builds, add it to your bash profile.
+
+If you run into this, be sure to run "make clean" to remove any broken artifacts,
+before trying to build again.
+
+At this stage, you should be able to change to the esp-vnc directory, and run
+make to build the ESP8266 firmware.
+
+  $ cd esp-vnc
+  $ make
+
+NOTE: It is expected to get errors regarding incorrect parameters passed to stat
+on OS X. This is part of the original esp-link makefile, and has not been
+corrected. It does not affect the final firmware build, it is just a check to
+make sure that the firmware is not too big.
+
+This should result in a user1.bin file in the esp-vnc/firmware directory.
+
+Building the AVR firmware
+=========================
 
 OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/cask/arduino
 
@@ -24,83 +58,68 @@ Linux can install using apt-get: apt-get install gcc-avr avrdude
 
 Once the avr tools are installed, and avr-gcc is in your PATH, compile the avr firmwares:
 
-cd avr
-make
+  $ cd avr
+  $ make
 
 This should build two firmwares, Program_ESP and KeyboardMouseGeneric. i.e you should have .hex files in each directory.
 
-If the ESP sdk was successfully installed, you should also be able to compile the ESP firmware.
+Programming the firmwares
+=========================
 
-cd esp-vnc
-make
+  $ esp-vnc/flash_esp esp-vnc/firmware/user1.bin avr/KeyboardMousegeneric/KeyboardMouseGeneric.hex
 
-This should result in a user1.bin file in the firmware directory.
+Note: The flash_esp and flash_avr shell scripts contain a pattern which usually
+manages to identify the serial port that the AVR appears at. If you have other
+USB Serial interfaces connected, you may want to either unplug them, or update
+the pattern to exclude the incorrect ports.
 
-I found the following invocation to be useful in programming both firmwares:
+Interacting with the device
+===========================
 
-avr/flash_avr avr/Program_ESP/Program_ESP.hex && sleep 2 && \
-esp-vnc/flash_esp esp-vnc/firmware/user1.bin && \
-avr/flash_avr avr/KeyboardMousegeneric/KeyboardMouseGeneric.hex
+To send keystrokes and mouse movements to the device, use a VNC client. The
+password is hard coded to "password".
 
-Alternatively, with a suitably updated flash_esp, you can do:
+To do this in an automated way, the vncdo tool is very useful. It is referenced
+as a submodule, to install it:
 
-esp-vnc/flash_esp esp-vnc/firmware/user1.bin avr/KeyboardMousegeneric/KeyboardMouseGeneric.hex
+  $ cd vncdotool
+  $ python setup.py
 
-which does the above for you.
+Note, vncdotool is only compatible with Python2.7, not python 3+
 
-To send vnc commands to it, use vncdotool, available in pip. Note, vncdotool is only compatible with Python2.7, not python 3+
-
-$ vncdo -s esp-link.lan -p password type "echo hello" key enter
+  $ vncdo -s esp-link.lan -p password type "echo hello" key enter
 
 A more comprehensive example might be:
 
-$ vncdo -s esp-link.lan -p password key alt-r pause 1 type powershell key enter pause 1 typefile win/USaBuse_PS/USaBuse_PS/read_exec.ps1
+  $ vncdo -s esp-link.lan -p password key alt-r pause 1 type powershell key enter pause 1 typefile powershell/read_exec.ps1
 
-An updated vncdo is available at https://github.com/RoganDawes/vncdotool that includes the ability to type out a file.
+If esp-link.lan does not resolve, look for port 23 and 5900 on the local network,
+or check your DHCP server.
 
-The hard coded password for the VNC server is "password". Ideally, I should include DES routines in the ESP firmware, so that the password can be changed dynamically.
+Interacting with the Generic HID interface requires the victim-side code found
+under the powershell/ directory, as well as the attacker-side code found in
+stage.sh. A demonstration of a complete, end-to-end attack can be found in
+attack.sh
 
-If esp-link.lan does not resolve, look for port 23 and 5900 on the local network, or check your DHCP server.
+In summary, the way it works is for the attacker to use VNC to type out a stage0
+payload (currently using powershell), which has just enough smarts to open the
+higher-bandwidth channel (currently only Generic HID is implemented), and load
+and execute a more complicated stage1 payload. There are a couple of stage1
+payloads implemented currently:
 
+* spawn.ps1 - Run cmd.exe, and pipe stdout/stderr over the device, while reading
+  from the device, and writing that to stdin of the process.
+* screenshot.ps1 - take a screenshot of the desktop, and send it over the device.
+* msf_proxy.ps1 - Open a TCP socket on localhost:65535, and relay data back and
+  forth over the device. In a separate thread, invoke the metasploit stage
+  loader, connecting to localhost:65535. This can be used to run a msfconsole
+  windows/shell/reverse_tcp or even (with some patience!) a full
+  windows/meterpreter/reverse_tcp.
 
-The various TLV packets are described here.
-TLV_CONTROL packets are packets that contain no attack data per se, but rather
-allow for control messages to be passed between various parts of the attack
-chain. For instance, TLV_CONTROL_FLOW packets control the flow of data between
-the 32U4 and the ESP8266. They have a single data byte, where 1 indicates that
-the ESP8266 should suspend sending data until the 32U4 has caught up, and 0
-indicates that the ESP8266 may resume sending data.
+Patience is required because the USB device does not have particularly high
+bandwidth. Generic HID is limited to 64KB/s, and the UART between the two
+microprocessors is limited to 250kbps (25KBps), but other limitations (many
+likely due to naive implementation!) limit us even further! Currently, we are
+achieving approximately 4KBps.
 
-TLV_CONTROL_CONNECT packets are generated by the 32U4 when the victim indicates
-it wants to connect to a certain channel. This is typically in response to the
-stage0 loader wanting its next stage, or the final powershell payload wanting
-a TCP socket connected to the attacker's controller. CONNECT packets simply
-contain the number of the channel that is being requested, where 0 indicates
-"no connection", 1 indicates "1st stage loader", and 2 indicates "msfconsole".
-
-The powershell payload indicates which connection it wants by sending a
-"zero-length HID report" (i.e. the 1st byte of the report data is 0), with
-the following byte indicating the desired channel.
-
-The basic idea is as follows:
-Device is connected via USB, current channel = 0
-Initially, the Generic HID reports will reflect a length of 0, and channel 0
-This is essentially what they are doing by default, returning a payload of 64 zeroes.
-
-Yet to be implemented, the Keyboard could periodically send a toggle key event,
-such as a numlock or scroll lock event, until it receives a corresponding report
-from the host. At this point, the device can assume that it has been successfully
-enumerated. It would be reasonable for the device to then request the VNC keystrokes
-that would run the powershell stage 0 script. In order to support on-demand triggered
-VNC scripts, one could potentially run the VNC client in "connect-back" mode.
-This may require additional code in vncdo to support this, but could otherwise
-be implemented using a double "LISTEN" tunnel, where the device hits the first
-listener, and waits until the vncdo instance connects to the second. This should
-probably be connection 1.
-
-Subsequently, if the typed stage 0 script requires it, it may request another
-connection. This can be done by sending a "zero-length" HID report, where byte[0]
-of the report == 0, byte[1] indicates the connection number, and subsequent bytes
-could even contain the IP Address and port to connect to. If the IP address is
-all zeroes, the ESP could open a listening socket instead. This could help to
-reduce the amount of configuration required in the device itself.
+Patches to improve the speed (and any other aspect of the system) are welcome!
