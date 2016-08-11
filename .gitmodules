@@ -7,3 +7,6 @@
 [submodule "esp-open-sdk"]
 	path = esp-open-sdk
 	url = https://github.com/pfalcon/esp-open-sdk
+[submodule "esptool"]
+	path = esptool
+	url = https://github.com/AprilBrother/esptool
