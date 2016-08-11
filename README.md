@@ -6,6 +6,18 @@ OS X and Linux can install the ESP tools by following the instruction in the ESP
 
 https://github.com/pfalcon/esp-open-sdk
 
+NB: Make sure to compile the non-standalone version of the esp-open-sdk, otherwise there will
+be problems with C types such as uint32_t:
+
+$ make STANDALONE=n
+
+Once the esp-open-sdk has compiled, in the top-level directory, do:
+
+$ wget --content-disposition "http://bbs.espressif.com/download/file.php?id=1046
+$ unzip ESP8266_NONOS_SDK_V1.5.1_16_01_08.zip
+
+At this stage, you should be able to change to the esp-vnc directory, and run make.
+
 OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/cask/arduino
 
 Linux can install using apt-get: apt-get install gcc-avr avrdude

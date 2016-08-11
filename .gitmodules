@@ -1,3 +1,9 @@
 [submodule "lufa"]
 	path = lufa
 	url = https://github.com/abcminiuser/lufa
+[submodule "esp-vnc"]
+	path = esp-vnc
+	url = https://github.com/sensepost/esp-vnc
+[submodule "esp-open-sdk"]
+	path = esp-open-sdk
+	url = https://github.com/pfalcon/esp-open-sdk
