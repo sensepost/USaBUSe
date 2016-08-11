@@ -2,7 +2,9 @@ Instructions for building the Universal Serial aBuse firmwares and host software
 
 Start off by performing a recursive clone of the repository:
 
+```
 $ git clone --recursive https://github.com/sensepost/USaBUSe
+```
 
 This can take some time, please be patient!
 
@@ -12,8 +14,10 @@ Building the ESP8266 firmware
 Once the recursive clone has completed, build the esp-open-sdk (make sure to
 build the STANDALONE version!):
 
+```
   $ cd esp-open-sdk
   $ make STANDALONE=n
+```
 
 Note: This step MUST be done on a case-sensitive file system! For OS X, create
 an extra volume, make sure to select a case-sensitive file system, and do the
@@ -21,14 +25,18 @@ above clone --recursive in this file system.
 
 Once the esp-open-sdk has compiled, in the top-level directory, do:
 
+```
   $ wget --content-disposition "http://bbs.espressif.com/download/file.php?id=1046"
   $ unzip ESP8266_NONOS_SDK_V1.5.1_16_01_08.zip
+```
 
 If you are on OS X, you will probably need to install GNU sed, and make sure it
 is in your PATH. An easy way of doing this is to use HomeBrew:
 
+```
   $ brew install gnu-sed
   $ export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+```
 
 Alternatively, to ensure that it remains accessible after you log out, and to
 avoid strange errors on future builds, add it to your bash profile.
@@ -39,8 +47,10 @@ before trying to build again.
 At this stage, you should be able to change to the esp-vnc directory, and run
 make to build the ESP8266 firmware.
 
+```
   $ cd esp-vnc
   $ make
+```
 
 NOTE: It is expected to get errors regarding incorrect parameters passed to stat
 on OS X. This is part of the original esp-link makefile, and has not been
@@ -54,19 +64,27 @@ Building the AVR firmware
 
 OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/cask/arduino
 
-Linux can install using apt-get: apt-get install gcc-avr avrdude
+Linux can install using apt-get:
+
+```
+  $ sudo apt-get install gcc-avr avrdude
+```
 
 Once the avr tools are installed, and avr-gcc is in your PATH, compile the avr firmwares:
 
+```
   $ cd avr
   $ make
+```
 
 This should build two firmwares, Program_ESP and KeyboardMouseGeneric. i.e you should have .hex files in each directory.
 
 Programming the firmwares
 =========================
 
+```
   $ esp-vnc/flash_esp esp-vnc/firmware/user1.bin avr/KeyboardMousegeneric/KeyboardMouseGeneric.hex
+```
 
 Note: The flash_esp and flash_avr shell scripts contain a pattern which usually
 manages to identify the serial port that the AVR appears at. If you have other
@@ -82,16 +100,22 @@ password is hard coded to "password".
 To do this in an automated way, the vncdo tool is very useful. It is referenced
 as a submodule, to install it:
 
+```
   $ cd vncdotool
   $ python setup.py
+```
 
 Note, vncdotool is only compatible with Python2.7, not python 3+
 
+```
   $ vncdo -s esp-link.lan -p password type "echo hello" key enter
+```
 
 A more comprehensive example might be:
 
+```
   $ vncdo -s esp-link.lan -p password key alt-r pause 1 type powershell key enter pause 1 typefile powershell/read_exec.ps1
+```
 
 If esp-link.lan does not resolve, look for port 23 and 5900 on the local network,
 or check your DHCP server.
