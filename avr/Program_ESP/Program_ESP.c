@@ -168,7 +168,7 @@ DDRB &= ~(1 << PB7);
 
 if (PORTB & ~(1<<PB7)) {
 	// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
-	PORTC &= !(1 << PC7);
+	PORTC &= ~(1 << PC7);
 	PORTD |= (1 << PD6);
 } else { // not present, Cactus Micro Rev2, or something else
 	PORTC |= (1 << PC7);
@@ -184,7 +184,7 @@ if (PORTB & ~(1<<PB7)) {
 	 // Set pin 12 to output
 	DDRC |= (1 << PC7);
 	DDRD |= (1 << PD6);
-#define BLACKBOX_V1
+// #define BLACKBOX_V1
 #ifndef BLACKBOX_V1
 	// set pin 13 to high, 12 to Low
 	PORTC |= (1 << PC7);
