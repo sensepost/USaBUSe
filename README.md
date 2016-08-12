@@ -148,6 +148,27 @@ achieving approximately 4KBps.
 
 Patches to improve the speed (and any other aspect of the system) are welcome!
 
+Once the basic stage0 payload has been typed out via VNC, the second stage is
+sent via the Generic HID interface (only implementation currently).
+
+read_exec.ps1 expects to receive the next stage in the following format:
+
+```
+<stage length high byte><stage length low byte><powershell stage>
+```
+
+The included stage.sh shell script takes care of this process for you.
+
+Note! There is an important sleep included between sending the second stage, and
+connecting the socket to the final endpoint (msf, etc). The reason for this is
+that the second stage may not finish on a 63-byte boundary, and if the final
+endpoint starts sending data prematurely, some of that data may end up "packed"
+into the empty space in the last packet of the stage2 payload. Currently, the
+stage0 loader has no mechanism to keep this data aside for later use by the
+second stage, and it gets discarded. Introducing a sleep ensures that any data
+from the final endpoint does not get packed in with the stage2 payload, and
+avoids data corruption.
+
 Using Metasploit Framework
 ==========================
 
