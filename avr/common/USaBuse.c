@@ -57,7 +57,7 @@ void detect_board() {
 
 	// Set pin 11 (PB7) to input
 	DDRB &= ~(1 << PB7);
-	bool led_present = (PORTB & ~(1<<PB7));
+	bool led_present = (PINB & (1<<PB7));
 	DDRB = old_DDRB;
 	if (led_present) {
 		// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped

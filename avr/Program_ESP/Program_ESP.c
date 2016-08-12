@@ -154,49 +154,38 @@ void SetupHardware(void)
 	clock_prescale_set(clock_div_1);
 #endif
 
-#if 0
 /*
  * Enable the ESP8266, which is connected to Arduino Digital Pin 13
  * aka PC7 and Arduino Digital Pin 12, aka PD6
+ * We detect the specific hardware using presence of an LED on pin 11
+ * in the case of the blackbox hardware
+ * Unfortunately, the blackbox hardware has some differences, in that
+ * the pins are swapped, and there is a pullup resistor, so we need to
+ * handle them differently
  */
  // Set pin 13 to output
  // Set pin 12 to output
-DDRC |= (1 << PC7);
-DDRD |= (1 << PD6);
-// Set pin 11 (PB7) to input
-DDRB &= ~(1 << PB7);
-
-if (PORTB & ~(1<<PB7)) {
-	// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
-	PORTC &= ~(1 << PC7);
-	PORTD |= (1 << PD6);
-} else { // not present, Cactus Micro Rev2, or something else
-	PORTC |= (1 << PC7);
-	PORTD &= ~(1 << PD6);
-}
-#else
-
-/*
- * Enable the ESP8266, which is connected to Arduino Digital Pin 13
- * aka PC7 and Arduino Digital Pin 12, aka PD6
- */
-	 // Set pin 13 to output
-	 // Set pin 12 to output
 	DDRC |= (1 << PC7);
 	DDRD |= (1 << PD6);
-// #define BLACKBOX_V1
-#ifndef BLACKBOX_V1
-	// set pin 13 to high, 12 to Low
-	PORTC |= (1 << PC7);
-	PORTD &= ~(1 << PD6);
-#else
-	// First batch of Blackbox boards had the pins switched
-	// pin 12 MUST be high, pin 13 MUST be high to boot, 13 must be low to program
-	// PORTC |= (1 << PC7);
-	PORTC &= ~(1 << PC7);
-	PORTD |= (1 << PD6);
-#endif
-#endif
+
+	uint8_t old_DDRB = DDRB, old_PORTB = PORTB;
+
+	// Set pin 11 (PB7) to input
+	DDRB &= ~(1 << PB7);
+	PORTB &= ~(1 << PB7);
+
+	bool led_present = (PINB & (1<<PB7));
+	DDRB = old_DDRB;
+	PORTB = old_PORTB;
+
+	if (led_present) {
+		// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
+		PORTC &= ~(1 << PC7);
+		PORTD |= (1 << PD6);
+	} else { // not present, Cactus Micro Rev2, or something else
+		PORTC |= (1 << PC7);
+		PORTD &= ~(1 << PD6);
+	}
 
 	/* Hardware Initialization */
 	LEDs_Init();
