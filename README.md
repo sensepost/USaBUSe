@@ -18,8 +18,6 @@ Lastly, we wanted this to be a working, end-to-end, attack. This means we also s
 Getting the Code
 ================
 
-Instructions for building the Universal Serial aBuse firmwares and host software
-
 Start off by performing a recursive clone of the repository:
 
 ```
@@ -28,76 +26,10 @@ $ git clone --recursive https://github.com/sensepost/USaBUSe
 
 This can take some time, please be patient!
 
-Building the ESP8266 firmware
-=============================
-
-Once the recursive clone has completed, build the esp-open-sdk (make sure to
-build the STANDALONE version!):
-
-```
-  $ cd esp-open-sdk
-  $ make STANDALONE=n
-```
-
-Note: This step MUST be done on a case-sensitive file system! For OS X, create
-an extra volume, make sure to select a case-sensitive file system, and do the
-above clone --recursive in this file system.
-
-Once the esp-open-sdk has compiled, in the top-level directory, do:
-
-```
-  $ wget --content-disposition "http://bbs.espressif.com/download/file.php?id=1046"
-  $ unzip ESP8266_NONOS_SDK_V1.5.1_16_01_08.zip
-```
-
-If you are on OS X, you will probably need to install GNU sed, and make sure it
-is in your PATH. An easy way of doing this is to use HomeBrew:
-
-```
-  $ brew install gnu-sed
-  $ export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
-```
-
-Alternatively, to ensure that it remains accessible after you log out, and to
-avoid strange errors on future builds, add it to your bash profile.
-
-If you run into this, be sure to run "make clean" to remove any broken artifacts,
-before trying to build again.
-
-At this stage, you should be able to change to the esp-vnc directory, and run
-make to build the ESP8266 firmware.
-
-```
-  $ cd esp-vnc
-  $ make
-```
-
-NOTE: It is expected to get errors regarding incorrect parameters passed to stat
-on OS X. This is part of the original esp-link makefile, and has not been
-corrected. It does not affect the final firmware build, it is just a check to
-make sure that the firmware is not too big.
-
-This should result in a user1.bin file in the esp-vnc/firmware directory.
-
-Building the AVR firmware
-=========================
-
-OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/cask/arduino
-
-Linux can install using apt-get:
-
-```
-  $ sudo apt-get install gcc-avr avr-libc avrdude
-```
-
-Once the avr tools are installed, and avr-gcc is in your PATH, compile the avr firmwares:
-
-```
-  $ cd avr
-  $ make
-```
-
-This should build two firmwares, Program_ESP and KeyboardMouseGeneric. i.e you should have .hex files in each directory.
+This repository has instructions and code for building the Universal Serial aBuse firmwares and host software. If you'd like to just run the attacks, then you don't need to clone all the submodules. The latest release (https://github.com/sensepost/USaBUSe/releases) will have precompiled firmware. After that you'll just need:
+* esptool to flash the firmware
+* vncdotool to run the automated interaction on the client
+* the scripts in this repository for the payloads and orchestration
 
 Programming the firmwares
 =========================
@@ -212,3 +144,75 @@ exploit
 
 NB: Do NOT set LHOST to 127.0.0.1, this is an internal "magic number" used by
 metasploit for its own purposes. Things randomly break if you do!
+
+Building the ESP8266 firmware
+=============================
+
+Once the recursive clone has completed, build the esp-open-sdk (make sure to
+build the STANDALONE version!):
+
+```
+  $ cd esp-open-sdk
+  $ make STANDALONE=n
+```
+
+Note: This step MUST be done on a case-sensitive file system! For OS X, create
+an extra volume, make sure to select a case-sensitive file system, and do the
+above clone --recursive in this file system.
+
+Once the esp-open-sdk has compiled, in the top-level directory, do:
+
+```
+  $ wget --content-disposition "http://bbs.espressif.com/download/file.php?id=1046"
+  $ unzip ESP8266_NONOS_SDK_V1.5.1_16_01_08.zip
+```
+
+If you are on OS X, you will probably need to install GNU sed, and make sure it
+is in your PATH. An easy way of doing this is to use HomeBrew:
+
+```
+  $ brew install gnu-sed
+  $ export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+```
+
+Alternatively, to ensure that it remains accessible after you log out, and to
+avoid strange errors on future builds, add it to your bash profile.
+
+If you run into this, be sure to run "make clean" to remove any broken artifacts,
+before trying to build again.
+
+At this stage, you should be able to change to the esp-vnc directory, and run
+make to build the ESP8266 firmware.
+
+```
+  $ cd esp-vnc
+  $ make
+```
+
+NOTE: It is expected to get errors regarding incorrect parameters passed to stat
+on OS X. This is part of the original esp-link makefile, and has not been
+corrected. It does not affect the final firmware build, it is just a check to
+make sure that the firmware is not too big.
+
+This should result in a user1.bin file in the esp-vnc/firmware directory.
+
+Building the AVR firmware
+=========================
+
+OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/cask/arduino
+
+Linux can install using apt-get:
+
+```
+  $ sudo apt-get install gcc-avr avr-libc avrdude
+```
+
+Once the avr tools are installed, and avr-gcc is in your PATH, compile the avr firmwares:
+
+```
+  $ cd avr
+  $ make
+```
+
+This should build two firmwares, Program_ESP and KeyboardMouseGeneric. i.e you should have .hex files in each directory.
+
