@@ -1,6 +1,8 @@
 Introduction
 ============
 
+(There's a full write up at https://www.sensepost.com/blog/2016/universal-serial-abuse/)
+
 Universal Serial aBUSe is a project released at Defcon 24 by Rogan Dawes. We took some fairly common attacks (fake keyboards in small USB devices that type nasty things) and extended them to provide us with a bi-directional binary channel over our own wifi network to give us remote access independent of the host's network. This gives us several improvements over traditional "Rubber Ducky" style attacks:
 
 * We can trigger the attack when we want. No missed executions.
