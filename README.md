@@ -67,7 +67,7 @@ OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/
 Linux can install using apt-get:
 
 ```
-  $ sudo apt-get install gcc-avr avrdude
+  $ sudo apt-get install gcc-avr avr-libc avrdude
 ```
 
 Once the avr tools are installed, and avr-gcc is in your PATH, compile the avr firmwares:
@@ -83,7 +83,7 @@ Programming the firmwares
 =========================
 
 ```
-  $ esp-vnc/flash_esp esp-vnc/firmware/user1.bin avr/KeyboardMousegeneric/KeyboardMouseGeneric.hex
+  $ esp-vnc/flash_esp esp-vnc/firmware/user1.bin avr/KeyboardMouseGeneric/KeyboardMouseGeneric.hex
 ```
 
 Note: The flash_esp and flash_avr shell scripts contain a pattern which usually
