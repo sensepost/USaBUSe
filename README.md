@@ -1,3 +1,23 @@
+Introduction
+============
+
+Universal Serial aBUSe is a project released at Defcon 24 by Rogan Dawes. We took some fairly common attacks (fake keyboards in small USB devices that type nasty things) and extended them to provide us with a bi-directional binary channel over our own wifi network to give us remote access independent of the host's network. This gives us several improvements over traditional "Rubber Ducky" style attacks:
+
+* We can trigger the attack when we want. No missed executions.
+* We don't use the host's network. No hassle on exfil, or potential for NIDS catching us.
+* We can shrink our initial typed payload to just open the binary pipe. Much less fragile typing required.
+* Lots of heavy lifting can be moved to the hardware, which gives less for stuff like AV to trigger on or DFIR teams to find.
+* We don't show up as a network adapter, our binary pipe is an innocuous device, making it harder to spot.
+
+Lastly, we wanted this to be a working, end-to-end, attack. This means we also spent time adding some nifty features like:
+
+* A mouse jiggler to prevent the screen saver from activating (but with no visible movement of the mouse)
+* Optimised payloads that are hidden from a user within 4s of their activation
+* An ability to integrate your favourite payload
+
+Getting the Code
+================
+
 Instructions for building the Universal Serial aBuse firmwares and host software
 
 Start off by performing a recursive clone of the repository:
@@ -122,8 +142,9 @@ or check your DHCP server.
 
 Interacting with the Generic HID interface requires the victim-side code found
 under the powershell/ directory, as well as the attacker-side code found in
-stage.sh. A demonstration of a complete, end-to-end attack can be found in
-attack.sh
+stage.sh. 
+
+*A demonstration of a complete, end-to-end attack can be found in attack.sh*
 
 In summary, the way it works is for the attacker to use VNC to type out a stage0
 payload (currently using powershell), which has just enough smarts to open the
