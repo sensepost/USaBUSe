@@ -1,0 +1,5 @@
+There are multiple tools bundled, some are written by us, some are modifications of others, as such multiple licenses apply.
+
+esp-open-sdk, esp-link (from which esp-vnc is derived), esptool, vncdotool & LUFA retail their original licenses.
+
+Universal Serial aBUSe (USaBUSe) the code, configuration files and scripts not already inheriting a license from the above and written by SensePost are licensed under a Creative Commons Attribution-ShareAlike Non-Commercial 4.0 International License (http://creativecommons.org/licenses/by-sa-nc/4.0/) Permissions beyond the scope of this license may be available at http://sensepost.com/contact us/.
