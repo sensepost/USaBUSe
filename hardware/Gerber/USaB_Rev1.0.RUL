@@ -1,0 +1,9 @@
+DRC Rules Export File for PCB: C:\BlackBox\USaB\PCB\Rev1.0\USaB_Rev1.0.PcbDoc
+RuleKind=Clearance|RuleName=Fiducial|Scope=Board|Minimum=19.69
+RuleKind=Clearance|RuleName=VAC|Scope=Board|Minimum=98.43
+RuleKind=Clearance|RuleName=50Z_Exclude|Scope=Board|Minimum=7.87
+RuleKind=Clearance|RuleName=50Z|Scope=Board|Minimum=7.87
+RuleKind=Clearance|RuleName=Clearance|Scope=Board|Minimum=7.87
+RuleKind=Width|RuleName=Width|Scope=Board|Minimum=8.03
+RuleKind=SolderMaskExpansion|RuleName=SolderMaskExpansion|Scope=Board|Minimum=4.00
+RuleKind=ShortCircuit|RuleName=ShortCircuit|Scope=Board|Allowed=0

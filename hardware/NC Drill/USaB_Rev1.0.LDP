@@ -1,0 +1,3 @@
+Layer Pairs Export File for PCB: C:\BlackBox\USaB\PCB\Rev1.0\USaB_Rev1.0.PcbDoc
+LayersSetName=Top_Bot_Thru_Holes|DrillFile=usab_rev1.0-roundholes.txt|LayerPairs=gtl,gbl
+LayersSetName=Top_Bot_Slot_Holes|DrillFile=usab_rev1.0-slotholes.txt|LayerPairs=gtl,gbl

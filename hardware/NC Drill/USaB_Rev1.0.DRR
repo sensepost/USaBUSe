@@ -1,0 +1,18 @@
+---------------------------------------------------------------------------
+NCDrill File Report For: USaB_Rev1.0.PcbDoc   2016/08/14  11:01:17 AM
+---------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : USaB_Rev1.0-RoundHoles.TXT
+ASCII SlotHoles File : USaB_Rev1.0-SlotHoles.TXT
+
+Tool         Hole Size           Hole Type     Hole Count Plated       Tool Travel
+---------------------------------------------------------------------------
+T1        15.7mil (0.39878mm)      Round          89               10.43 Inch (264.84 mm)
+T2        27.6mil (0.70104mm)      Slot           2                284.37 Inch (7222.89 mm)
+T3        19.7mil (0.50038mm)      Round          20        NPTH   1.43 Inch (36.40 mm)
+T4        43.3mil (1.09982mm)      Round          4         NPTH   1.72 Inch (43.74 mm)
+---------------------------------------------------------------------------
+Totals                                            115              297.95 Inch (7567.87 mm)
+
+Total Processing Time (hh:mm:ss) : 00:00:00
