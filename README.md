@@ -32,16 +32,13 @@ Building the ESP8266 firmware
 =============================
 
 Once the recursive clone has completed, build the esp-open-sdk (make sure to
-build the STANDALONE version!):
+build the STANDALONE version!). OS X users PLEASE NOTE that this step MUST be
+done on a case-sensitive filesystem!
 
 ```
   $ cd esp-open-sdk
   $ make STANDALONE=n
 ```
-
-Note: This step MUST be done on a case-sensitive file system! For OS X, create
-an extra volume, make sure to select a case-sensitive file system, and do the
-above clone --recursive in this file system.
 
 Once the esp-open-sdk has compiled, in the top-level directory, do:
 
@@ -122,7 +119,7 @@ as a submodule, to install it:
 
 ```
   $ cd vncdotool
-  $ python setup.py
+  $ python setup.py install
 ```
 
 Note, vncdotool is only compatible with Python2.7, not python 3+
