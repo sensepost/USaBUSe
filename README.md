@@ -214,24 +214,3 @@ corrected. It does not affect the final firmware build, it is just a check to
 make sure that the firmware is not too big.
 
 This should result in a user1.bin file in the esp-vnc/firmware directory.
-
-Building the AVR firmware
-=========================
-
-OS X can also get the AVR compiler by installing the Arduino app, e.g. Caskroom/cask/arduino
-
-Linux can install using apt-get:
-
-```
-  $ sudo apt-get install gcc-avr avr-libc avrdude
-```
-
-Once the avr tools are installed, and avr-gcc is in your PATH, compile the avr firmwares:
-
-```
-  $ cd avr
-  $ make
-```
-
-This should build two firmwares, Program_ESP and KeyboardMouseGeneric. i.e you should have .hex files in each directory.
-
