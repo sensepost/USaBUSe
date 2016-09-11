@@ -1,32 +1,15 @@
 #include <LUFA/Drivers/Peripheral/Serial.h>
 #include "USaBuse.h"
 
-typedef void (*f_enable_esp)(void);
-f_enable_esp enable_esp = NULL;
-
 typedef void (*f_uart_flowcontrol)(bool flow_stopped);
 f_uart_flowcontrol uart_flowcontrol = NULL;
 
-void cm_enable_esp(void);
-void cm_enable_esp() {
+void enable_esp(void);
+void enable_esp() {
 	/*
-	 * Enable the ESP8266 on the Cactus Micro Rev2.
-	 * CH_PD is connected to Arduino Digital Pin 13 aka PC7
-	 * GPIO_0 is connected to Arduino Digital Pin 12, aka PD6
-	 */
-	DDRC |= (1 << PC7);
-	DDRD |= (1 << PD6);
-	PORTC |= (1 << PC7);
-	PORTD &= ~(1 << PD6);
-}
-
-void bb_enable_esp(void);
-void bb_enable_esp() {
-	/*
-	 * Enable the ESP8266 on the Blackbox device.
-	 * CH_PD is connected to Arduino Digital Pin 12 aka PD6
-	 * GPIO_0 is connected to Arduino Digital Pin 13, aka PC7
-	 * However GPIO_0 must be pulled high to boot!
+	 * Enable the ESP8266 on the board.
+	 * Even though there are wiring differences, enabling the
+	 * ESP is the same, because both lines must be HIGH.
 	 */
 	DDRC |= (1 << PC7);
 	DDRD |= (1 << PD6);
@@ -61,10 +44,8 @@ void detect_board() {
 	DDRB = old_DDRB;
 	if (led_present) {
 		// LED is present, indicates Blackbox hardware with pin 12 and 13 swapped
-		enable_esp = bb_enable_esp;
 		uart_flowcontrol = bb_uart_flowcontrol;
 	} else {
-		enable_esp = cm_enable_esp;
 		uart_flowcontrol = cm_uart_flowcontrol;
 	}
 }
