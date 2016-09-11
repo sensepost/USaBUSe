@@ -8,20 +8,23 @@ HEX="$1"
 
 # this device pattern works OK on Linux and OS X, but watch out
 # if you have any additional USB Serial devices connected
-
-DEVICEPATTERN="/dev/cu.usbmodem* /dev/ttyACM*"
+# this device pattern works OK on Linux and OS X, but watch out
+# if you have any additional USB Serial devices connected
+if [ -z "${DEVICEPATTERN}" ] ; then
+	DEVICEPATTERN="/dev/cu.usbmodem* /dev/ttyACM*"
+fi
 
 DEVICE=`ls ${DEVICEPATTERN} 2> /dev/null`
 
 if [ -z "$DEVICE" ] ; then
-	echo -n "No device found, waiting for it to show up"
+	echo -n "No device found, waiting for it to show up - Press RESET twice quickly"
 	while [ -z "$DEVICE" ] ; do
 		sleep 1
 		echo -n "."
 		DEVICE=`ls ${DEVICEPATTERN} 2> /dev/null`
 	done
 else
-	echo -n "Waiting for the device to go away "
+	echo -n "Waiting for ${DEVICE} to go away "
 	while [ -c ${DEVICE} ] ; do sleep 1; echo -n "."; done
 	echo
 	echo -n "Waiting for it to come back "
