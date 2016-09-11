@@ -4,10 +4,9 @@ BASEDIR=`dirname $0`
 
 HEX="$1"
 
-# press the reset button twice to enter the bootloader, then loop until the bootloader serial interface appears, before trying to program it
+# press the reset button twice to enter the bootloader, then loop until the 
+# bootloader serial interface appears, before trying to program it
 
-# this device pattern works OK on Linux and OS X, but watch out
-# if you have any additional USB Serial devices connected
 # this device pattern works OK on Linux and OS X, but watch out
 # if you have any additional USB Serial devices connected
 if [ -z "${DEVICEPATTERN}" ] ; then
