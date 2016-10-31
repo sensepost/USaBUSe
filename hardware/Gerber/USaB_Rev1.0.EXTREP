@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
-Gerber File Extension Report For: USaB_Rev1.0.GBR   2016/08/14  11:01:16 AM
+Gerber File Extension Report For: USaB_Rev1.0.GBR   2016/08/29  08:48:26 AM
 ------------------------------------------------------------------------------------------
 
 
@@ -15,6 +15,7 @@ Layer Extension     Layer Description
 .GTS                Top Solder                              
 .GBS                Bottom Solder                           
 .GBO                Bottom Overlay                          
+.GM3                Mechanical 3                            
 .GM5                Mechanical 5                            
 .GD1                Drill Drawing                           
 .GG1                Drill Guide                             

@@ -19,7 +19,8 @@ D82   ROUNDED            59.055      59.055       0.000 FLASH       0.000
 D83   ROUNDED             7.874       7.874       0.000 FLASH       0.000
 D84   ROUNDED           129.921      55.118       0.000 FLASH     180.000
 D86   ROUNDED            55.244      55.244       0.000 FLASH       0.000
-D92   ROUNDED             1.968       1.968       0.000  LINE       0.000
+D92   ROUNDED             5.905       5.905       0.000  LINE       0.000
 D93   ROUNDED             6.299       6.299       0.000  LINE       0.000
 D94   ROUNDED             0.394       0.394       0.000  LINE       0.000
-D95   ROUNDED             5.000       5.000       0.000  LINE       0.000
+D95   ROUNDED             1.968       1.968       0.000  LINE       0.000
+D96   ROUNDED             5.000       5.000       0.000  LINE       0.000

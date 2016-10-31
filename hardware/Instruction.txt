@@ -1,0 +1,17 @@
+Black Box Industries (PTY) Ltd
+All Rights Reserved 2015
+
+USaB Rev1.01
+July 2016
+
+0.8mm FR4
+4 Layers
+All layers: 70um.
+Soldermask: Black
+Silkscreen: White
+Holes without pads are NPTH
+HASL
+Panel 2up
+38.35mm x 35.83mm
+
+Note slots on mechanical layer 5
