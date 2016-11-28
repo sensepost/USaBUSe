@@ -2,7 +2,7 @@
 
 vncdo -s $1 -p password \
 	pause 2 \
-	key alt-r \
+	key meta-r \
 	pause 2 \
 	type "powershell" \
 	key enter \

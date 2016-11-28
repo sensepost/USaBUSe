@@ -68,7 +68,7 @@ Note, vncdotool is only compatible with Python2.7, not python 3+
 A more comprehensive example might be:
 
 ```
-  $ vncdo -s esp-link.lan -p password key alt-r pause 1 type powershell key enter pause 1 typefile powershell/read_exec.ps1
+  $ vncdo -s esp-link.lan -p password key meta-r pause 1 type powershell key enter pause 1 typefile powershell/read_exec.ps1
 ```
 
 If esp-link.lan does not resolve, look for port 23 and 5900 on the local network,
