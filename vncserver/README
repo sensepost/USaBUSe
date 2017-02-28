@@ -1,0 +1,18 @@
+This Makefile expects to be able to find the libvncserver-dev
+package installed somewhere
+
+On a Raspberry Pi Zero, something like:
+
+$ sudo apt install libvncserver-dev
+
+is sufficient.
+
+This is a modification of the "simple.c" example server from the libvncserver source
+
+It receives keystrokes and mouse movements from the VNC client, and emits them as USB HID events via /dev/hidg1.
+
+It is closely tied to the setup script, in that the event payload structure and size has to match up. Any changes to the USB gadget setup script may require changes to the source of this code, and recompilation!
+
+In order to achieve higher performance in terms of emitting keystrokes as fast as possible, it also supports the ClientCutText message, which is typically triggered by pressing "Ctrl-C" on some text in the VNC client. On receipt of this message, this application will proceed to type out the copied text as quickly as possible. In theory, it may be better to wait until the user follows the ClientCutText message with a suitable "paste" command (e.g. Ctrl-V keystroke), but this is how it is currently implemented!
+
+In order to perform scripted execution of VNC keystrokes and mouse movement, the "vncdotool" package has been enhanced to support the required messages.
