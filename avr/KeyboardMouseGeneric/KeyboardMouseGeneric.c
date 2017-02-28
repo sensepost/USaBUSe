@@ -227,6 +227,9 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 
 			uint8_t* data = (uint8_t *) ReportData;
 			uint8_t count = usabuse_get_pipe(&data[1], GENERIC_REPORT_SIZE - 1);
+			if (count == 0)
+				return false;
+			
 			data[0] = (count & (GENERIC_REPORT_SIZE-1)) |
 				((write_overflow ? 1 : 0) << 6) |
 				((usabuse_pipe_write_is_blocked() ? 1 : 0) << 7);
