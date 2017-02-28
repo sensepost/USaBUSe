@@ -1,0 +1,53 @@
+Documentation of USaBUSe packet format
+======================================
+
+Each packet is $M bytes long, where $M is a value between 8 and 64. $M is defined in the USB device descriptor and report descriptor, and is typically 64.
+
+NB: NB: NB:
+===========
+Powershell prepends a ReportID byte at the beginning of each packet, making them 65 bytes long, and consequently, each byte in the packet is shifted up by 1.
+
+The packet is structured as follows:
+
+Byte 0: Channel number. Valid values are 0-255
+Byte 1: Flags. These include SYN, ACK, FIN, RST
+Byte 2: Bits 7-4: Packet sequence number
+Byte 2: Bits 3-0: Packet sequence number acknowledgement
+Byte 3: Data length: The length of any data in the remainder of this packet. Max value is $M-4, 0 indicates that no data is being sent. e.g. pure acknowledgement of a previous packet, with no response
+Byte 4 - ($M-1): data
+
+Establishing connections
+=======================
+
+The connection establishment protocol is analogous to TCP. Either side may choose a channel number to transmit on. To initiate a connection, the client sends a packet with the SYN flag set, and the packet sequence number set to a random value A in the range 0-15. The server responds with the same channel number, with the SYN and ACK flags set, with the packet sequence number set to a random number B in the range 0-15, and the ack number set to A+1. The client responds with a packet with the ACK flag set, with the sequence number = B+1, and the ack number equal to the received ACK value, A+1.
+
+At this stage, communications can proceed, with the sequence numbers from each side incrementing whenever there is data to be sent, and the sender retransmitting the packet until the corresponding ACK is received.
+
+Finally, the connection is terminated by either side sending a packet with the FIN flag set. The other side should respond with an ACK of its own, at which point no further data can be transferred.
+
+Connections can be established in either direction. Channel 0 is reserved for communication with the initial loader, other channels are connected to a SOCKS server (in either direction), for outbound connections.
+
+Connections can make use of "fast open", where data is sent to the other side in the same packet as the SYN/ACK, where appropriate.
+
+Connection States
+=================
+
+A connection can be in one of several states:
+
+Closed
+HALF Open
+OPEN
+LOCAL Closed
+REMOTE Closed
+
+Bootstrap protocol
+==================
+
+In order to reduce the amount of slow "typing" required, USaBUSe types out a minimal loader, just enough to comprehend the above protocol, and receive additional instructions from the attacker. The nature of the instructions will obviously depend on the initial loader.
+
+The currently implemented PowerShell loader expects a 2 byte length (MSB first), followed by additional PowerShell instructions. Those instructions will be executed when "length" bytes of data have been received from the attacker.
+
+The additional instructions can rely on a few predefined variables:
+
+$f : a FileStream connected to the USB HID device.
+$M : the size of the USB HID packet, excluding the report ID. This allows for use of different sized RAW HID endpoints, without rewriting too much code. Obviously, the smaller the packet, the lower the bandwidth, and the more overhead there is in packet sequence numbers, etc.
