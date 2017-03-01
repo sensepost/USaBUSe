@@ -17,6 +17,18 @@ Lastly, we wanted this to be a working, end-to-end, attack. This means we also s
 * Optimised payloads that are hidden from a user within 4s of their activation
 * An ability to integrate your favourite payload
 
+Linux Update
+============
+
+Software for using low-cost Linux hardware, such as the BeagleBone Black, Raspberry Pi Zero (and now W, too!), Orange Pi Zero, etc was released recently. This enhances the protocol used over the "pipe" to support multiple concurrent connections, allowing things like meterpreter upgrades, beaconing C&C, etc, to work over USaBUSe. The new software includes the following:
+
+1. Linux shell script to configure the USB gadget (and remove it again)
+2. a VNC server implementation that emits keystrokes and mouse movements via a composite HID device.
+3. Updated Powershell code implementing the new multiplexing protocol, both for the initial bootstrap, as well as a more fully featured implementation.
+4. a HIDProxy implementation that reads and writes the raw HID device, and converts it back into multiple socket connections as necessary. It also delivers the second stage Powershell code.
+
+Getting started with the Linux implementation is a matter of running the shell script to configure the USB gadget (currently identical to the AVR implementation of USaBUSe), running the VNC server, and the HID proxy, and setting up your listener to catch the incoming shell!
+
 Getting the Code
 ================
 
