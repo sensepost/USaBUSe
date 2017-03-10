@@ -5,9 +5,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.net.SocketAddress;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.EventLoop;
 import io.netty.channel.oio.OioByteStreamChannel;
 
 public class FileChannel extends OioByteStreamChannel {
@@ -15,8 +19,8 @@ public class FileChannel extends OioByteStreamChannel {
 	private boolean open = true;
 	private ChannelConfig config;
 	private FileAddress remote;
-	private FileInputStream fis;
-	private FileOutputStream fos;
+	protected FileInputStream fis;
+	protected FileOutputStream fos;
 
 	public FileChannel() {
 		super(null);
@@ -98,7 +102,6 @@ public class FileChannel extends OioByteStreamChannel {
 	@Override
 	protected void doBind(SocketAddress addr) throws Exception {
 		throw new UnsupportedOperationException();
-
 	}
 
 	@Override
@@ -110,4 +113,5 @@ public class FileChannel extends OioByteStreamChannel {
 	protected SocketAddress remoteAddress0() {
 		return remote;
 	}
+
 }

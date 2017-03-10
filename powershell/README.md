@@ -7,23 +7,17 @@ The read_exec's are basically stage0. They open a connection to the binary pipe 
 
 Here's a brief description of the various versions:
 
-* read_exec.ps1 - the version you should probably use. It's optimised to by typed quickly, and does clever things to hide the window.
+* read_exec.ps1 - the version you should probably use. It's optimised to be typed quickly, and does clever things to hide the window.
 
-* read_exec_long.ps1 - the same as the above but indented nicely so you can try understand it.
-
-* read_exec_mini.ps1 - a powershell one liner to be executed via the command line (e.g. cmd.exe). It's smaller than the first read_exec, but can't do smart things to hide the command window while it's being typed.
-
-* read_exec_mini_tab.ps1 - an experiment in seeing if TAB characters could reduce the amount of typing. They didn't really.
+* read_exec_long.ps1 - the same as the above but commented, and indented nicely so you can understand it.
 
 Stage 1
 =======
 
-There are a couple of stage 1 options:
+There is one primary Stage 1 option, which is Proxy.ps1. This does a couple of clever things:
 
-* spawn.ps1 gives you a simple shell
+* It establishes a TCP proxy, listening on localhost only, on TCP/65535. Any connections to this port will create a new channel (up to 255), which will	be multiplexed over the USB interface to the attacker, where they will be split out into individual connections again.
 
-* screenshot.ps1 takes a screenshot
+* It spawns a cmd.exe instance, which is bound to channel 1.
 
-* msfstage_proxy.ps1 creates the TCP to HID proxy on the host that meterpreter or the like can use
-
-* hello_world.ps1 is a very simple payload with comments to give you a bit of an understanding of the protocol
+In this way, the attacker gets the opportunity to interact with the victim via cmd.exe, but can also execute other programs connecting back to localhost:65535, in order to upgrade their connection. E.g. one could use this to run a powershell meterpreter upgrade script, or could launch PowerShell Empire, with the "remote server" being at http://localhost:65535/.

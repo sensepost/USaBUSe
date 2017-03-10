@@ -15,4 +15,8 @@ class FileAddress extends SocketAddress {
 	public File file() {
 		return file;
 	}
+
+	public String toString() {
+		return file.toString();
+	}
 }
