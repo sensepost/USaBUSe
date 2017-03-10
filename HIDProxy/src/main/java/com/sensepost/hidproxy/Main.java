@@ -43,6 +43,19 @@ public class Main {
 		return targets;
 	}
 
+	private static String toString(InetSocketAddress[] targets) {
+		StringBuilder b = new StringBuilder();
+		if (targets.length >= 1) {
+			b.append(targets[0]);
+			for (int i=1; i<targets.length; i++) {
+				b.append(",").append(targets[i]);
+			}
+		} else {
+			b.append("None!");
+		}
+		return b.toString();
+	}
+
 	public static void main(String[] args) throws Exception {
 
 		File payload0 = new File(PAYLOAD0);
@@ -68,7 +81,7 @@ public class Main {
 						.childHandler(new MuxInitializer(targets, payload0, PACKETSIZE));
 				c = b.bind(source).sync().channel();
 
-				System.out.println("Listening on " + source + "\n" + "Connections will be relayed to " + targets
+				System.out.println("Listening on " + source + "\n" + "Connections will be relayed to " + toString(targets)
 						+ "\nPress Enter to shutdown");
 				System.in.read();
 				System.out.print("Exiting...");
