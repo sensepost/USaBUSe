@@ -9,7 +9,9 @@ data=$(cat $infil)
 	#data="$tmp"
 #done
 
-
+#Uncomment double commented lines
+tmp="$(echo "$data"|sed 's/##//g')"
+data="$tmp"
 #Remove comments
 tmp="$(echo "$data"|sed 's/#.*//g')"
 data="$tmp"
