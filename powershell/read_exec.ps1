@@ -2,7 +2,7 @@ $ui=$Host.UI.RawUI
 $ui.ForegroundColor=$ui.BackgroundColor
 Clear
 
-ui.WindowTitle=''
+$ui.WindowTitle=''
 $M=64
 $cs='
 using System;
