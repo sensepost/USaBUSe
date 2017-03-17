@@ -29,6 +29,60 @@ Software for using low-cost Linux hardware, such as the BeagleBone Black, Raspbe
 
 Getting started with the Linux implementation is a matter of running the shell script to configure the USB gadget (currently identical to the AVR implementation of USaBUSe), running the VNC server, and the HID proxy, and setting up your listener to catch the incoming shell!
 
+Running on Linux
+================
+
+I’ll assume that you have the SBC installed with a version of Linux. Depending on the SBC, you may have to jump through other hoops to get the OTG interface working. For examples, on the Raspberry Pi Zero, follow Gbaman’s guide. On the BeagleBone Black, everything is configured already, as far as I recall.
+
+To make sure it is ready, check that the following command returns a result:
+
+  ls -l /sys/class/udc/
+
+You will likely need a few prerequisites before you continue, particularly:
+
+  sudo apt install git libvncserver-dev build-essentials
+
+Then
+
+  git clone https://github.com/SensePost/USaBUSe
+
+Run the script to configure the USB gadget:
+
+  cd USaBUSe/linux
+  sudo ./configure_USB.sh
+
+You should see the OS recognise the new device, and load the drivers.
+
+Compiling the VNC server should be fairly simple, just run make in the appropriate directory.
+
+  cd ../vncserver
+  make
+  ./usabuse_vnc &
+
+Or alternatively, do not background it, and continue in a new terminal window (e.g. using screen).
+
+At this point, you need to make a decision about where you want to run the HID proxy server. As a Java application, it can be a little heavyweight to run on a small SBC. It can run OK on the Pi Zero, but there is not a huge amount of memory available. The alternative, which is the recommended approach, is to forward the HID device file over the network to a more capable computer, using socat:
+
+  while sleep 5; do
+  socat TCP:192.168.2.1:65534 /dev/hidg1
+  done
+
+Substitute the 192.168.2.1 IP address for that of your own workstation. This will continuously attempt to connect to the HID Proxy server, and only then start reading and writing from the HID device.
+
+Install Java on the computer you plan to run the HIDProxy on:
+
+  sudo apt install oracle-java8-jdk maven2
+  mvn package
+  java -jar target/hidproxy-1.0.0.one-jar.jar
+
+By default, the application will listen on *:65534 for an incoming connection, assuming that the HIDProxy is being run on a different machine to the SBC. To run it on the SBC, run it as follows:
+
+  java -Dsource=/dev/hidg1 -jar target/hidproxy-1.0.0.one-jar.jar
+
+By default, HIDProxy will forward connections on channel 1 to localhost:4444, and any higher connections to localhost:65535. This is because the first connection is always the cmd shell, and any other connections will be connections to localhost:65535 on the victim.
+
+See https://sensepost.com/blog/2017/usabuse-linux-updates/ for an example of how to use the TCP forwarding with Meterpreter.
+
 Getting the Code
 ================
 
