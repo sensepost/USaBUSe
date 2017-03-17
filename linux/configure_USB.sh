@@ -78,3 +78,4 @@ ln -s functions/hid.usb1 configs/c.1
 # enable the device
 echo "$UDC" > UDC
 
+chmod go+rw /dev/hidg{0,1}
